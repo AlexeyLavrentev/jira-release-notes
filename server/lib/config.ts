@@ -27,7 +27,7 @@ export function loadConfig(): Config {
   const result = ConfigSchema.safeParse(merged);
   if (!result.success) {
     const issues = result.error.issues
-      .map((i) => `  • ${i.path.join('.') || '(root)'}: ${i.message}`)
+      .map((i: { path: PropertyKey[]; message: string }) => `  • ${i.path.join('.') || '(root)'}: ${i.message}`)
       .join('\n');
     // Use console here — logger is created from config; if config is invalid, logger isn't ready.
     console.error(`Configuration validation failed:\n${issues}`);

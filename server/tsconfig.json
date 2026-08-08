@@ -13,10 +13,9 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "composite": true
   },
-  "include": ["**/*.ts"],
-  "exclude": ["dist", "**/*.test.ts"],
-  "references": [{ "path": "../shared" }]
+  "include": ["**/*.ts", "**/*.d.ts", "../shared/**/*.ts"],
+  "exclude": ["dist", "**/*.test.ts", "../shared/dist"]
 }
