@@ -2,11 +2,11 @@ import { useConnectionStatus } from '../hooks/useConnectionStatus.js';
 import { StatusCard } from '../components/StatusCard.js';
 
 /**
- * Status page (CONTEXT.md D-29, D-34): reads /api/config and shows the StatusCard.
- * Loading → Skeleton; Error → message; Success → StatusCard.
+ * Status page (CONTEXT.md D-29, D-34): reads /api/config + /api/connection-status.
+ * Loading → Skeleton; Error → message; Success → StatusCard with version + error guidance.
  */
 export function StatusPage() {
-  const { data, isLoading, error } = useConnectionStatus();
+  const { config, connectionStatus, isLoading, error } = useConnectionStatus();
 
   return (
     <main
@@ -22,8 +22,8 @@ export function StatusPage() {
         <Skeleton />
       ) : error ? (
         <ErrorBox message={error instanceof Error ? error.message : 'Ошибка подключения'} />
-      ) : data ? (
-        <StatusCard config={data} />
+      ) : config ? (
+        <StatusCard config={config} connectionStatus={connectionStatus} />
       ) : null}
     </main>
   );
@@ -36,7 +36,7 @@ function Skeleton() {
       aria-label="Загрузка"
       style={{
         background: 'var(--surface)',
-        border: `1px solid var(--border)`,
+        border: '1px solid var(--border)',
         borderRadius: 16,
         padding: '2rem',
         maxWidth: 480,
@@ -58,7 +58,7 @@ function ErrorBox({ message }: { message: string }) {
       role="alert"
       style={{
         background: 'var(--surface)',
-        border: `1px solid var(--error)`,
+        border: '1px solid var(--error)',
         borderRadius: 16,
         padding: '2rem',
         maxWidth: 480,

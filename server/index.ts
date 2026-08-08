@@ -1,11 +1,11 @@
 import { buildApp } from './app.js';
 import { loadConfig } from './lib/config.js';
 import { logger } from './lib/logger.js';
+import { meetsPatRequirement } from './lib/jira-client.js';
 
 /**
  * Entry point (CONTEXT.md D-50): config validation happens BEFORE listen().
- * If config is invalid, loadConfig exits 1 with a clear message.
- * On SIGTERM/SIGINT, Fastify closes gracefully (D-59).
+ * Pre-listen version check (D-33): Jira < 8.14 → exit(1); unreachable/auth → warn + continue.
  */
 async function main() {
   const config = loadConfig();
@@ -16,7 +16,25 @@ async function main() {
 
   const app = await buildApp(config);
 
-  // Graceful shutdown (D-59).
+  // Pre-listen Jira version check. version_too_old is fatal (app is fundamentally incompatible);
+  // unreachable/auth are transient — warn and let the status screen show the error.
+  try {
+    const info = await app.jiraClient.getServerInfo();
+    if (!meetsPatRequirement(info.version)) {
+      logger.error(
+        { jiraVersion: info.version, required: '8.14+' },
+        'Jira version too old for PAT — exiting',
+      );
+      process.exit(1);
+    }
+    logger.info({ jiraVersion: info.version }, 'Jira version OK');
+  } catch (err) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      'Jira unreachable at startup (continuing — check connection-status screen)',
+    );
+  }
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'shutting down');
     try {

@@ -1,24 +1,24 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { Config } from '../shared/schemas/config.js';
 import { logger } from './lib/logger.js';
+import { createJiraClient } from './lib/jira-client.js';
 import { healthPlugin } from './plugins/health.js';
 import { configPlugin } from './plugins/config.js';
+import { jiraPlugin } from './plugins/jira.js';
 import { staticPlugin } from './plugins/static.js';
 
 /**
  * Build the Fastify app (CONTEXT.md D-52, D-53).
- * Plugins registered by domain: health (public) → config (/api/config) → static (SPA catch-all).
- * setErrorHandler returns JSON errors on /api/* with stack traces masked in production (D-58).
+ * Plugins by domain: health (public) → config (/api/config) → jira (/api/*) → static (SPA catch-all).
  */
 export async function buildApp(config: Config): Promise<FastifyInstance> {
   const app = Fastify({
     loggerInstance: logger as any,
   });
 
-  // Decorate with config so plugins can read it (PAT lives here, never serialized to client).
   app.decorate('config', config);
+  app.decorate('jiraClient', createJiraClient(config));
 
-  // JSON error handler for /api/* (D-58): mask 500 stack traces in production.
   app.setErrorHandler((err, req, reply) => {
     const isApi = req.url.startsWith('/api/');
     const status =
@@ -38,8 +38,8 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
   });
 
   await app.register(healthPlugin);
-  await app.register(configPlugin, { prefix: '' });
-  // static is registered last so the wildcard catch-all doesn't shadow /api and /health.
+  await app.register(configPlugin);
+  await app.register(jiraPlugin);
   await app.register(staticPlugin);
 
   return app;
