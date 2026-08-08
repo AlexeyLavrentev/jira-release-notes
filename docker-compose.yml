@@ -1,0 +1,17 @@
+# Single compose file for dev+prod (CONTEXT.md D-49).
+# Parameterized via .env file (PORT, JIRA_BASE_URL, JIRA_PAT, etc.).
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./config.json:/app/config.json:ro
+    environment:
+      NODE_ENV: production
+      JIRA_BASE_URL: ${JIRA_BASE_URL:-}
+      JIRA_PAT: ${JIRA_PAT:-}
+      JIRA_RELEASE_NOTE_FIELD: ${JIRA_RELEASE_NOTE_FIELD:-customfield_10000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+    restart: unless-stopped
