@@ -11,16 +11,12 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "declaration": true,
-    "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": ".",
-    "composite": true,
-    "allowImportingTsExtensions": false,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["dist", "src/**/*.test.ts", "src/**/*.test.tsx"],
-  "references": [{ "path": "../shared" }]
+  "exclude": ["dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }

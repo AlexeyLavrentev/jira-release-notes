@@ -20,7 +20,6 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
   app.decorate('jiraClient', createJiraClient(config));
 
   app.setErrorHandler((err, req, reply) => {
-    const isApi = req.url.startsWith('/api/');
     const status =
       err && typeof err === 'object' && 'statusCode' in err && typeof err.statusCode === 'number' && err.statusCode >= 400
         ? err.statusCode

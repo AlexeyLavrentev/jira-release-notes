@@ -26,7 +26,8 @@ const BADGE: Record<BadgeState, { label: string; color: string }> = {
  * role="status" + aria-live for accessibility (D-35).
  */
 export function StatusCard({ config, connectionStatus }: StatusCardProps) {
-  const badge = deriveBadge(connectionStatus);
+  const badgeState = deriveBadge(connectionStatus);
+  const badge = BADGE[badgeState];
   return (
     <div
       role="status"
