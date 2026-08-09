@@ -2,8 +2,8 @@
  * Public API for the exporter module (CONTEXT.md D-31).
  *
  * The core (group + render) is pure and tested; ExportPage / DocumentPreview consume only what
- * this barrel re-exports. Plan 02 will add buildPlain/buildHtml/download — they are NOT
- * pre-declared here (adding them later is additive, no churn for current consumers).
+ * this barrel re-exports. Plan 02 added buildPlain/buildHtml + the download helpers below — they
+ * are additive re-exports, no churn for existing consumers.
  */
 
 export {
@@ -17,6 +17,18 @@ export {
 } from './group.js';
 
 export { buildMarkdown, pluralizeTask } from './format-md.js';
+
+export { buildPlain } from './format-plain.js';
+
+export { buildHtml, INLINE_CSS } from './format-html.js';
+
+export {
+  sanitizeVersion,
+  buildExportFilename,
+  downloadFile,
+  EXPORT_MIME,
+  VERSION_FORBIDDEN_CHARS,
+} from './download.js';
 
 export type {
   GroupingMode,

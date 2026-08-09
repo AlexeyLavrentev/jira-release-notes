@@ -98,10 +98,13 @@ describe('buildHtml — XSS sanitization (T-05-03, rehype-sanitize defaultSchema
       ],
     });
     const html = await buildHtml(doc);
+    // No onerror anywhere in the output (the string-level guarantee the plan requires).
     expect(html).not.toContain('onerror');
+    // And specifically no element in the rendered body carries an onerror attribute. rehype-sanitize
+    // defaultSchema drops the dangerous attribute entirely (and in fact drops <img> itself, since
+    // img is not in the default tagNames) — either way, the security property holds.
     const dom = parseBody(html);
-    const img = dom.querySelector('body img');
-    // rehype-sanitize defaultSchema keeps <img src> but drops dangerous attributes like onerror.
-    expect(img?.getAttribute('onerror')).toBeNull();
+    const body = dom.body;
+    expect(body.querySelectorAll('[onerror]').length).toBe(0);
   });
 });

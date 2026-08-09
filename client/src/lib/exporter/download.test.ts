@@ -80,8 +80,9 @@ describe('downloadFile (D-21)', () => {
     const createSpy = vi.spyOn(URL, 'createObjectURL');
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
 
-    // jsdom supports document.createElement + click on the anchor.
-    const removeSpy = vi.spyOn(Element.prototype, 'remove');
+    // Track appendChild + removeChild on document.body to verify the anchor lifecycle.
+    const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const removeChildSpy = vi.spyOn(document.body, 'removeChild');
 
     downloadFile('hello', 'md', 'release-notes-1.2.3.md');
 
@@ -91,12 +92,20 @@ describe('downloadFile (D-21)', () => {
     const blob = createSpy.mock.calls[0][0] as Blob;
     expect(blob.type).toBe(EXPORT_MIME.md);
 
-    // An <a download="..."> was appended, clicked, then removed.
-    expect(removeSpy).toHaveBeenCalled();
+    // An <a download="..."> was appended to the body and removed again.
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    const anchor = appendSpy.mock.calls[0][0] as HTMLAnchorElement;
+    expect(anchor.tagName).toBe('A');
+    expect(anchor.download).toBe('release-notes-1.2.3.md');
+    expect(anchor.href).toBe('blob:mock');
+    expect(removeChildSpy).toHaveBeenCalledWith(anchor);
+    // After the call the body has no leftover download anchor.
+    expect(document.body.querySelector('a[download]')).toBeNull();
 
     expect(revokeSpy).toHaveBeenCalledTimes(1);
     expect(revokeSpy).toHaveBeenCalledWith('blob:mock');
-    removeSpy.mockRestore();
+    appendSpy.mockRestore();
+    removeChildSpy.mockRestore();
   });
 
   it('rethrows so the caller (ExportPage handler) can surface the error box', () => {
