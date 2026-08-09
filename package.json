@@ -35,7 +35,10 @@
     "pino-pretty": "^11.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "9.1.0",
     "react-router-dom": "^7.0.0",
+    "rehype-sanitize": "6.0.0",
+    "remark-gfm": "4.0.1",
     "tailwind-merge": "^2.5.0",
     "zod": "^3.23.0"
   },
