@@ -1,5 +1,13 @@
+import { useMemo, useState } from 'react';
 import type { SearchResponse } from '../../../shared/types/issue';
-import type { ErrorResponse } from '../../../shared/types/issue';
+import { IssueRow } from './IssueRow.js';
+import { ValidationFilter } from './ValidationFilter.js';
+import {
+  validateIssues,
+  countByCategory,
+  categoryPriority,
+  type ValidationFilterMode,
+} from '../lib/validation.js';
 
 interface IssueTableProps {
   data: SearchResponse | undefined;
@@ -11,10 +19,32 @@ interface IssueTableProps {
 }
 
 /**
- * Issue table (D-18, D-19, D-21, D-23, D-05, D-07, D-38).
- * 9 columns, skeleton loading, empty state, truncated Alert, error with retry.
+ * Issue table (D-18..D-24, D-32..D-38).
+ * Integrates validation (colors, flags, filter, counters) and expandable rows.
  */
 export function IssueTable({ data, isLoading, error, hasSearched, onRetry, tableRef }: IssueTableProps) {
+  const [validationFilter, setValidationFilter] = useState<ValidationFilterMode>('all');
+
+  const issues = data?.issues ?? [];
+  const categories = useMemo(() => validateIssues(issues), [issues]);
+  const counts = useMemo(() => countByCategory(categories), [categories]);
+
+  // Sort: problematic first (D-35), filter by mode (D-33)
+  const visibleIssues = useMemo(() => {
+    const filtered = issues.filter((issue) => {
+      const cat = categories.get(issue.key) ?? 'valid';
+      if (validationFilter === 'problematic') return cat !== 'valid';
+      if (validationFilter === 'valid') return cat === 'valid';
+      return true;
+    });
+    // Sort: problematic first (categoryPriority ascending)
+    return [...filtered].sort((a, b) => {
+      const ca = categories.get(a.key) ?? 'valid';
+      const cb = categories.get(b.key) ?? 'valid';
+      return categoryPriority[ca] - categoryPriority[cb];
+    });
+  }, [issues, categories, validationFilter]);
+
   // Before first search
   if (!hasSearched && !data && !isLoading && !error) {
     return (
@@ -38,16 +68,7 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
     const msg = error instanceof Error ? error.message : 'Неизвестная ошибка';
     return (
       <div style={{ padding: '2rem' }}>
-        <div
-          role="alert"
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--error)',
-            borderRadius: 12,
-            padding: '1.5rem',
-            color: 'var(--error)',
-          }}
-        >
+        <div role="alert" style={errorBoxStyle}>
           <strong>Ошибка: {msg}</strong>
           {onRetry && (
             <button onClick={onRetry} style={{ ...btnStyle, marginLeft: '1rem' }}>
@@ -59,7 +80,6 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
     );
   }
 
-  const issues = data?.issues ?? [];
   const total = data?.total ?? 0;
   const fetched = data?.fetched ?? 0;
   const truncated = data?.truncated ?? false;
@@ -75,24 +95,16 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
   }
 
   return (
-    <div ref={tableRef} style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
+    <div ref={tableRef} style={{ maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
       {/* Truncated Alert (D-05) */}
       {truncated && (
-        <div
-          role="alert"
-          style={{
-            margin: '0.75rem 1.5rem',
-            padding: '0.75rem 1rem',
-            background: 'rgba(255,159,10,0.1)',
-            border: '1px solid var(--warning)',
-            borderRadius: 8,
-            color: 'var(--warning)',
-            fontSize: '0.8125rem',
-          }}
-        >
+        <div role="alert" style={truncatedAlertStyle}>
           Показано {fetched} из {total}. Уточните критерии для полноты.
         </div>
       )}
+
+      {/* Validation filter + counters (D-33, D-34) */}
+      <ValidationFilter counts={counts} activeFilter={validationFilter} onFilterChange={setValidationFilter} />
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
         <thead>
@@ -109,29 +121,8 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
           </tr>
         </thead>
         <tbody>
-          {issues.map((issue) => (
-            <tr key={issue.key} style={{ borderBottom: '1px solid var(--border)' }}>
-              <Td>
-                <code style={{ fontSize: '0.75rem' }}>{issue.key}</code>
-              </Td>
-              <Td>{issue.summary}</Td>
-              <Td>
-                {issue.issuetype.iconUrl && (
-                  <img src={issue.issuetype.iconUrl} alt="" style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 4 }} />
-                )}
-                {issue.issuetype.name}
-              </Td>
-              <Td>{issue.status.name}</Td>
-              <Td>{issue.priority?.name ?? '—'}</Td>
-              <Td>{issue.components.map((c) => c.name).join(', ') || '—'}</Td>
-              <Td>{issue.fixVersions.map((v) => v.name).join(', ') || '—'}</Td>
-              <td title={issue.releaseNote} style={{ padding: '0.5rem 0.75rem', verticalAlign: 'top' }}>
-                {issue.releaseNote.length > 80
-                  ? issue.releaseNote.slice(0, 80) + '…'
-                  : issue.releaseNote || '—'}
-              </td>
-              <td style={{ padding: '0.5rem 0.75rem', verticalAlign: 'top', color: 'var(--text-muted)' }}>—</td>
-            </tr>
+          {visibleIssues.map((issue) => (
+            <IssueRow key={issue.key} issue={issue} category={categories.get(issue.key) ?? 'valid'} />
           ))}
         </tbody>
       </table>
@@ -144,6 +135,10 @@ function Th({ children }: { children: React.ReactNode }) {
     <th
       scope="col"
       style={{
+        position: 'sticky',
+        top: 0,
+        background: 'var(--surface)',
+        zIndex: 1,
         padding: '0.5rem 0.75rem',
         textAlign: 'left',
         fontWeight: 600,
@@ -151,15 +146,12 @@ function Th({ children }: { children: React.ReactNode }) {
         fontSize: '0.75rem',
         textTransform: 'uppercase',
         whiteSpace: 'nowrap',
+        borderBottom: '2px solid var(--border)',
       }}
     >
       {children}
     </th>
   );
-}
-
-function Td({ children }: { children: React.ReactNode }) {
-  return <td style={{ padding: '0.5rem 0.75rem', verticalAlign: 'top' }}>{children}</td>;
 }
 
 function SkeletonTable() {
@@ -168,18 +160,30 @@ function SkeletonTable() {
       {Array.from({ length: 9 }, (_, i) => (
         <div
           key={i}
-          style={{
-            height: '2.25rem',
-            background: 'var(--border)',
-            borderRadius: 6,
-            marginBottom: '0.5rem',
-            opacity: 0.5,
-          }}
+          style={{ height: '2.25rem', background: 'var(--border)', borderRadius: 6, marginBottom: '0.5rem', opacity: 0.5 }}
         />
       ))}
     </div>
   );
 }
+
+const errorBoxStyle: React.CSSProperties = {
+  background: 'var(--surface)',
+  border: '1px solid var(--error)',
+  borderRadius: 12,
+  padding: '1.5rem',
+  color: 'var(--error)',
+};
+
+const truncatedAlertStyle: React.CSSProperties = {
+  margin: '0.75rem 1.5rem',
+  padding: '0.75rem 1rem',
+  background: 'rgba(255,159,10,0.1)',
+  border: '1px solid var(--warning)',
+  borderRadius: 8,
+  color: 'var(--warning)',
+  fontSize: '0.8125rem',
+};
 
 const btnStyle: React.CSSProperties = {
   padding: '0.375rem 1rem',
