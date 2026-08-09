@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
+import { Preview } from '../components/Preview.js';
 import type { SearchResponse } from '../../../shared/types/issue';
 import type { SearchBody } from '../../../shared/schemas/search';
 
@@ -86,38 +87,65 @@ export function EditPage() {
 
   return (
     <div style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: 24 }}>
+      <style>{MARKDOWN_TYPOGRAPHY}</style>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 24 }}>
         <header style={{ marginBottom: 16 }}>
           <code style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{issue!.key}</code>
           <h1 style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: 600 }}>{issue!.summary}</h1>
         </header>
 
-        <label htmlFor="release-note-editor" style={{ display: 'block', marginBottom: 8 }}>
-          Release note для {key}
-        </label>
-        <textarea
-          id="release-note-editor"
-          value={text}
-          onChange={handleChange}
-          placeholder="Введите текст release note (markdown)..."
-          autoFocus
-          style={{
-            width: '100%',
-            minHeight: '60vh',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontSize: '0.9375rem',
-            lineHeight: 1.6,
-            padding: 12,
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            background: 'var(--surface)',
-            color: 'var(--text)',
-            resize: 'vertical',
-          }}
-        />
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '4px 0 16px' }}>{text.length} символов</p>
+        {/* Desktop (md+): split — meta+textarea left, sticky preview right (D-03).
+            Mobile (<md): single column, stacked — Plan 04 replaces with tabs. */}
+        <div className="md:grid md:grid-cols-2 md:gap-6">
+          {/* Left: editor */}
+          <div>
+            <label htmlFor="release-note-editor" style={{ display: 'block', marginBottom: 8 }}>
+              Release note для {key}
+            </label>
+            <textarea
+              id="release-note-editor"
+              value={text}
+              onChange={handleChange}
+              placeholder="Введите текст release note (markdown)..."
+              autoFocus
+              style={{
+                width: '100%',
+                minHeight: '60vh',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                fontSize: '0.9375rem',
+                lineHeight: 1.6,
+                padding: 12,
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                background: 'var(--surface)',
+                color: 'var(--text)',
+                resize: 'vertical',
+              }}
+            />
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '4px 0 16px' }}>
+              {text.length} символов
+            </p>
+          </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {/* Right: sticky preview (D-03) */}
+          <div>
+            <div
+              style={{
+                position: 'sticky',
+                top: 80,
+                maxHeight: 'calc(100vh - 100px)',
+                overflowY: 'auto',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+              }}
+            >
+              <Preview text={text} />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
           <button onClick={() => navigate('/select')} style={doneBtnStyle}>
             Готово
           </button>
@@ -126,6 +154,21 @@ export function EditPage() {
     </div>
   );
 }
+
+/**
+ * Scoped typography for rendered markdown inside Preview. Inline-style idiom doesn't cover
+ * nested elements (table cells, blockquotes, code), so a single global <style> block is the
+ * pragmatic minimal approach — selectors are markdown-output-specific (rn-preview-*).
+ */
+const MARKDOWN_TYPOGRAPHY = `
+.rn-preview h1, .rn-preview h2, .rn-preview h3 { margin: 1rem 0 0.5rem; }
+.rn-preview table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; }
+.rn-preview th, .rn-preview td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; }
+.rn-preview code { font-family: ui-monospace, monospace; background: var(--bg); padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.85em; }
+.rn-preview blockquote { border-left: 3px solid var(--border); margin: 0.5rem 0; padding-left: 1rem; color: var(--text-muted); }
+.rn-preview a { color: var(--accent); }
+.rn-preview input[type=checkbox] { margin-right: 0.25rem; }
+`;
 
 const doneBtnStyle: React.CSSProperties = {
   padding: '0.5rem 1.5rem',
