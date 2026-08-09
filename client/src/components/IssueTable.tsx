@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { SearchResponse } from '../../../shared/types/issue';
 import { IssueRow } from './IssueRow.js';
+import { MobileIssueCard } from './MobileIssueCard.js';
 import { ValidationFilter } from './ValidationFilter.js';
 import {
   validateIssues,
@@ -8,6 +10,7 @@ import {
   categoryPriority,
   type ValidationFilterMode,
 } from '../lib/validation.js';
+import { sortIssues, type SortKey, type SortDirection } from '../lib/sort.js';
 
 interface IssueTableProps {
   data: SearchResponse | undefined;
@@ -18,18 +21,36 @@ interface IssueTableProps {
   tableRef?: React.RefObject<HTMLDivElement | null>;
 }
 
+const SORTABLE: { key: SortKey; label: string }[] = [
+  { key: 'key', label: 'Key' },
+  { key: 'summary', label: 'Summary' },
+  { key: 'priority', label: 'Приоритет' },
+  { key: 'resolutiondate', label: 'Дата закрытия' },
+];
+
 /**
- * Issue table (D-18..D-24, D-32..D-38).
- * Integrates validation (colors, flags, filter, counters) and expandable rows.
+ * Issue table (D-18..D-24, D-29, D-32..D-38).
+ * Validation + sorting + responsive (table desktop, cards mobile) + sticky header.
  */
 export function IssueTable({ data, isLoading, error, hasSearched, onRetry, tableRef }: IssueTableProps) {
   const [validationFilter, setValidationFilter] = useState<ValidationFilterMode>('all');
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const issues = data?.issues ?? [];
   const categories = useMemo(() => validateIssues(issues), [issues]);
   const counts = useMemo(() => countByCategory(categories), [categories]);
 
-  // Sort: problematic first (D-35), filter by mode (D-33)
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDirection('desc');
+    }
+  }
+
+  // Filter + sort (D-20 manual sort disables validation autopriority, D-33 filter, D-35 autopriority)
   const visibleIssues = useMemo(() => {
     const filtered = issues.filter((issue) => {
       const cat = categories.get(issue.key) ?? 'valid';
@@ -37,13 +58,18 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
       if (validationFilter === 'valid') return cat === 'valid';
       return true;
     });
-    // Sort: problematic first (categoryPriority ascending)
+
+    if (sortKey) {
+      // Manual sort (D-20) — disables autopriority
+      return sortIssues(filtered, sortKey, sortDirection);
+    }
+    // Autopriority: problematic first (D-35)
     return [...filtered].sort((a, b) => {
       const ca = categories.get(a.key) ?? 'valid';
       const cb = categories.get(b.key) ?? 'valid';
       return categoryPriority[ca] - categoryPriority[cb];
     });
-  }, [issues, categories, validationFilter]);
+  }, [issues, categories, validationFilter, sortKey, sortDirection]);
 
   // Before first search
   if (!hasSearched && !data && !isLoading && !error) {
@@ -54,7 +80,6 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
     );
   }
 
-  // Loading — skeleton rows (D-07)
   if (isLoading) {
     return (
       <div ref={tableRef} style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
@@ -63,7 +88,6 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
     );
   }
 
-  // Error (D-40)
   if (error) {
     const msg = error instanceof Error ? error.message : 'Неизвестная ошибка';
     return (
@@ -84,7 +108,6 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
   const fetched = data?.fetched ?? 0;
   const truncated = data?.truncated ?? false;
 
-  // Empty result (D-23)
   if (issues.length === 0) {
     return (
       <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -96,24 +119,23 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
 
   return (
     <div ref={tableRef} style={{ maxHeight: 'calc(100vh - 380px)', overflowY: 'auto' }}>
-      {/* Truncated Alert (D-05) */}
       {truncated && (
         <div role="alert" style={truncatedAlertStyle}>
           Показано {fetched} из {total}. Уточните критерии для полноты.
         </div>
       )}
 
-      {/* Validation filter + counters (D-33, D-34) */}
       <ValidationFilter counts={counts} activeFilter={validationFilter} onFilterChange={setValidationFilter} />
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+      {/* Desktop table (D-18, md+) */}
+      <table className="hidden md:table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid var(--border)' }}>
-            <Th>Key</Th>
-            <Th>Summary</Th>
+            <SortableTh sortKey="key" current={sortKey} direction={sortDirection} onSort={handleSort}>Key</SortableTh>
+            <SortableTh sortKey="summary" current={sortKey} direction={sortDirection} onSort={handleSort}>Summary</SortableTh>
             <Th>Тип</Th>
             <Th>Статус</Th>
-            <Th>Приоритет</Th>
+            <SortableTh sortKey="priority" current={sortKey} direction={sortDirection} onSort={handleSort}>Приоритет</SortableTh>
             <Th>Компоненты</Th>
             <Th>Fix Version</Th>
             <Th>Release Note</Th>
@@ -126,7 +148,56 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
           ))}
         </tbody>
       </table>
+
+      {/* Mobile cards (D-29, <md) */}
+      <div className="block md:hidden" role="list">
+        {visibleIssues.map((issue) => (
+          <MobileIssueCard key={issue.key} issue={issue} category={categories.get(issue.key) ?? 'valid'} />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function SortableTh({
+  sortKey,
+  current,
+  direction,
+  onSort,
+  children,
+}: {
+  sortKey: SortKey;
+  current: SortKey | null;
+  direction: SortDirection;
+  onSort: (key: SortKey) => void;
+  children: React.ReactNode;
+}) {
+  const isActive = current === sortKey;
+  const ariaSort = isActive ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
+  return (
+    <th
+      scope="col"
+      aria-sort={ariaSort}
+      onClick={() => onSort(sortKey)}
+      style={{
+        position: 'sticky',
+        top: 0,
+        background: 'var(--surface)',
+        zIndex: 1,
+        padding: '0.5rem 0.75rem',
+        textAlign: 'left',
+        fontWeight: 600,
+        color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+        fontSize: '0.75rem',
+        textTransform: 'uppercase',
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        borderBottom: '2px solid var(--border)',
+      }}
+    >
+      {children}
+      {isActive && (direction === 'asc' ? <ChevronUp size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> : <ChevronDown size={12} style={{ display: 'inline', verticalAlign: 'middle' }} />)}
+    </th>
   );
 }
 
@@ -158,10 +229,7 @@ function SkeletonTable() {
   return (
     <div aria-busy="true" style={{ padding: '0 1.5rem' }}>
       {Array.from({ length: 9 }, (_, i) => (
-        <div
-          key={i}
-          style={{ height: '2.25rem', background: 'var(--border)', borderRadius: 6, marginBottom: '0.5rem', opacity: 0.5 }}
-        />
+        <div key={i} style={{ height: '2.25rem', background: 'var(--border)', borderRadius: 6, marginBottom: '0.5rem', opacity: 0.5 }} />
       ))}
     </div>
   );
