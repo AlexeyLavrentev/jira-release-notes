@@ -1,11 +1,11 @@
 import { buildApp } from './app.js';
 import { loadConfig } from './lib/config.js';
 import { logger } from './lib/logger.js';
-import { meetsPatRequirement } from './lib/jira-client.js';
+import { meetsPatRequirement, createJiraClient } from './lib/jira-client.js';
 
 /**
  * Entry point (CONTEXT.md D-50): config validation happens BEFORE listen().
- * Pre-listen version check (D-33): Jira < 8.14 → exit(1); unreachable/auth → warn + continue.
+ * Pre-listen: version check (D-33) + Epic Link discovery (D-26).
  */
 async function main() {
   const config = loadConfig();
@@ -14,12 +14,23 @@ async function main() {
     'config loaded (PAT masked)',
   );
 
-  const app = await buildApp(config);
-
-  // Pre-listen Jira version check. version_too_old is fatal (app is fundamentally incompatible);
-  // unreachable/auth are transient — warn and let the status screen show the error.
+  // Discover Epic Link field BEFORE building app (need it for the decorator).
+  const tempClient = createJiraClient(config);
+  let epicLinkFieldId: string | null = null;
   try {
-    const info = await app.jiraClient.getServerInfo();
+    epicLinkFieldId = await tempClient.discoverEpicLinkField();
+    if (epicLinkFieldId) {
+      logger.info({ epicLinkFieldId }, 'Epic Link field discovered');
+    } else {
+      logger.warn('Epic Link field not found — epic will be null for all issues');
+    }
+  } catch {
+    logger.warn('Epic Link discovery failed — epic will be null for all issues');
+  }
+
+  // Version check via temp client.
+  try {
+    const info = await tempClient.getServerInfo();
     if (!meetsPatRequirement(info.version)) {
       logger.error(
         { jiraVersion: info.version, required: '8.14+' },
@@ -34,6 +45,8 @@ async function main() {
       'Jira unreachable at startup (continuing — check connection-status screen)',
     );
   }
+
+  const app = await buildApp(config, epicLinkFieldId);
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'shutting down');

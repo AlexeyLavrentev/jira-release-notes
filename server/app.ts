@@ -11,13 +11,17 @@ import { staticPlugin } from './plugins/static.js';
  * Build the Fastify app (CONTEXT.md D-52, D-53).
  * Plugins by domain: health (public) → config (/api/config) → jira (/api/*) → static (SPA catch-all).
  */
-export async function buildApp(config: Config): Promise<FastifyInstance> {
+export async function buildApp(
+  config: Config,
+  epicLinkFieldId: string | null = null,
+): Promise<FastifyInstance> {
   const app = Fastify({
     loggerInstance: logger as any,
   });
 
   app.decorate('config', config);
   app.decorate('jiraClient', createJiraClient(config));
+  app.decorate('epicLinkFieldId', epicLinkFieldId);
 
   app.setErrorHandler((err, req, reply) => {
     const status =
