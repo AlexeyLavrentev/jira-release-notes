@@ -162,14 +162,57 @@ describe('ExportPage', () => {
     expect(src).not.toMatch(/useSearch\s*\(/); // must NOT call useSearch() with an enabled body
   });
 
-  it('changing the grouping via the select to "type" produces multiple H2 groups and updates the URL group param', () => {
+  it('changing the grouping via the GroupingControl radiogroup to "type" produces multiple H2 groups and updates the URL group param', () => {
     const { container } = renderWithProviders(SEARCH_URL);
-    const select = screen.getByRole('combobox', { name: 'Шаблон группировки' });
-    fireEvent.change(select, { target: { value: 'type' } });
+    // Plan 04 replaced the tracer inline <select> with the GroupingControl radiogroup. Click the
+    // «По типу» radio to switch grouping to 'type'.
+    const radio = screen.getByRole('radio', { name: 'По типу' });
+    fireEvent.click(radio);
     const h2s = container.querySelectorAll('h2');
     expect(h2s.length).toBeGreaterThan(1); // Bug + Story → two groups
     const loc = screen.getByTestId('loc').textContent ?? '';
     expect(loc).toContain('group=type');
+  });
+
+  it('renders a GroupingControl radiogroup (role=radiogroup) — not the old tracer <select>', () => {
+    renderWithProviders(SEARCH_URL);
+    expect(screen.getByRole('radiogroup', { name: 'Шаблон группировки' })).toBeInTheDocument();
+    // The tracer combobox is gone.
+    expect(screen.queryByRole('combobox', { name: 'Шаблон группировки' })).not.toBeInTheDocument();
+  });
+
+  it('renders the three section captions ГРУППИРОВКА / СОРТИРОВКА / ШАПКА ДОКУМЕНТА', () => {
+    renderWithProviders(SEARCH_URL);
+    expect(screen.getByText('ГРУППИРОВКА')).toBeInTheDocument();
+    expect(screen.getByText('СОРТИРОВКА')).toBeInTheDocument();
+    expect(screen.getByText('ШАПКА ДОКУМЕНТА')).toBeInTheDocument();
+  });
+
+  it('renders the D-41 summary line «Групп: N • Задач: M • С правками: K»', () => {
+    renderWithProviders(SEARCH_URL);
+    // Default grouping = flat → 1 group. 2 issues in the cache. 0 edits.
+    expect(screen.getByText('Групп:')).toBeInTheDocument();
+    expect(screen.getByText('Задач:')).toBeInTheDocument();
+    expect(screen.getByText('С правками:')).toBeInTheDocument();
+  });
+
+  it('renders the mobile tablist (Контролы | Предпросмотр) with aria-label "Режим сборки", default Предпросмотр', () => {
+    renderWithProviders(SEARCH_URL);
+    const tablist = screen.getByRole('tablist', { name: 'Режим сборки' });
+    expect(tablist).toBeInTheDocument();
+    const controlsTab = screen.getByRole('tab', { name: 'Контролы' });
+    const previewTab = screen.getByRole('tab', { name: 'Предпросмотр' });
+    // Default mobile tab is 'preview' (D-27) — Предпросмотр is selected.
+    expect(previewTab).toHaveAttribute('aria-selected', 'true');
+    expect(controlsTab).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('on mobile, the preview panel is visible and the controls panel is hidden by default (default Предпросмотр)', () => {
+    const { container } = renderWithProviders(SEARCH_URL);
+    const previewPanel = container.querySelector('#panel-preview');
+    const controlsPanel = container.querySelector('#panel-controls');
+    expect(previewPanel?.className).toContain('block');
+    expect(controlsPanel?.className).toContain('hidden');
   });
 
   describe('export buttons (D-22, D-40, EXP-01/02/03)', () => {
@@ -185,12 +228,14 @@ describe('ExportPage', () => {
 
     it('renders the desktop in-panel row AND the mobile sticky bar (class md:hidden)', () => {
       const { container } = renderWithProviders(SEARCH_URL);
-      // Two bars: the desktop row (hidden md:flex) and the mobile sticky bar (md:hidden).
-      const stickyBars = container.querySelectorAll('.md\\:hidden');
-      expect(stickyBars.length).toBe(1);
-      // Each bar carries the three export buttons.
+      // Plan 04 adds the mobile tablist (also md:hidden), so .md:hidden now matches BOTH the
+      // tablist and the sticky export bar. The sticky bar is the .md:hidden element that actually
+      // contains export buttons — filter to it and assert it carries the three buttons.
+      const mdHiddenEls = Array.from(container.querySelectorAll('.md\\:hidden'));
+      const stickyBar = mdHiddenEls.find((el) => el.querySelector('.rn-export-btn'));
+      expect(stickyBar).toBeDefined();
       const mdButtons = screen.getAllByRole('button', { name: 'Экспорт в Markdown' });
-      expect(mdButtons.length).toBe(2);
+      expect(mdButtons.length).toBe(2); // desktop row (hidden md:flex) + mobile sticky bar (md:hidden)
     });
 
     it('clicking "Экспорт в Markdown" calls downloadFile with ext "md", a sanitized filename, and buildMarkdown content', () => {
