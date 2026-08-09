@@ -6,7 +6,7 @@ import { useConnectionStatus } from '../hooks/useConnectionStatus.js';
  * Click on status → / (status page).
  */
 export function AppHeader() {
-  const { config, connectionStatus } = useConnectionStatus();
+  const { connectionStatus } = useConnectionStatus();
   const connected = connectionStatus?.connected && connectionStatus.meetsPatRequirement;
 
   return (

@@ -21,13 +21,6 @@ interface IssueTableProps {
   tableRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-const SORTABLE: { key: SortKey; label: string }[] = [
-  { key: 'key', label: 'Key' },
-  { key: 'summary', label: 'Summary' },
-  { key: 'priority', label: 'Приоритет' },
-  { key: 'resolutiondate', label: 'Дата закрытия' },
-];
-
 /**
  * Issue table (D-18..D-24, D-29, D-32..D-38).
  * Validation + sorting + responsive (table desktop, cards mobile) + sticky header.

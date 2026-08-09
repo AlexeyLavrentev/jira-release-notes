@@ -36,7 +36,7 @@ export function SelectPage() {
       if (dateTo) body.dateTo = dateTo;
       setSearchBody(body);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Mount-only: intentionally empty deps (restore from URL once on mount)
   }, []);
 
   // Scroll to top on new search (D-08)
