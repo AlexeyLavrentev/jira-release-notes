@@ -65,9 +65,24 @@ function renderWithProviders(initialPath: string, preseedCache = true) {
       <EditsProvider>
         <MemoryRouter initialEntries={[initialPath]}>
           <Routes>
-            <Route path="/export" element={<ExportPage />} />
-            <Route path="/select" element={<div>select page</div>} />
-            <Route path="*" element={<LocationProbe />} />
+            <Route
+              path="/export"
+              element={
+                <>
+                  <ExportPage />
+                  <LocationProbe />
+                </>
+              }
+            />
+            <Route
+              path="/select"
+              element={
+                <div>
+                  select page
+                  <LocationProbe />
+                </div>
+              }
+            />
           </Routes>
         </MemoryRouter>
       </EditsProvider>
