@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
 import { Preview } from '../components/Preview.js';
@@ -45,14 +46,33 @@ export function EditPage() {
   const data = searchBody ? queryClient.getQueryData<SearchResponse>(searchQueryKey(searchBody)) : undefined;
   const issue = key ? (data?.issues.find((i) => i.key === key) ?? null) : null;
 
-  const [text, setText] = useState(() => (key ? (edits[key] ?? issue?.releaseNote ?? '') : ''));
+  // ↑↓ navigation through the search-result key list (D-04). disabled at each list end.
+  const keys = data?.issues.map((i) => i.key) ?? [];
+  const currentIndex = key ? keys.indexOf(key) : -1;
+  const prevKey = currentIndex > 0 ? keys[currentIndex - 1] : null;
+  const nextKey = currentIndex >= 0 && currentIndex < keys.length - 1 ? keys[currentIndex + 1] : null;
 
-  // Reactive to :key change (↑↓ nav in Plan 04 changes params without remount).
+  const [text, setText] = useState(() => (key ? (edits[key] ?? issue?.releaseNote ?? '') : ''));
+  const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit'); // D-22 default 'edit'
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reactive to :key change (↑↓ nav changes params without remount) — textarea + preview update,
+  // and focus follows the active task (D-23).
   useEffect(() => {
     setText(key ? (edits[key] ?? issue?.releaseNote ?? '') : '');
-    // edits + issue intentionally re-derived each key change; eslint-disable for edits inclusion
+    textareaRef.current?.focus();
+    // edits + issue intentionally re-derived each key change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+
+  // Esc = back to /select (D-23). window listener catches Esc even while the textarea is focused.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') navigate('/select');
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [navigate]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const next = e.target.value;
@@ -97,20 +117,90 @@ export function EditPage() {
     <div style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
       <style>{MARKDOWN_TYPOGRAPHY}</style>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: 24 }}>
-        <header style={{ marginBottom: 16 }}>
-          <code style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{issue!.key}</code>
-          <h1 style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: 600 }}>{issue!.summary}</h1>
+        <header style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <code style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{issue!.key}</code>
+              {isEdited && (
+                <span aria-label="Отредактировано" title="Отредактировано" style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                  •
+                </span>
+              )}
+            </div>
+            <h1 style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: 600 }}>{issue!.summary}</h1>
+          </div>
+          {/* ↑↓ navigation (D-04). disabled at list ends. */}
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button
+              onClick={() => prevKey && navigate(`/edit/${prevKey}`)}
+              disabled={!prevKey}
+              aria-label="Предыдущая задача"
+              style={navBtnStyle(!prevKey)}
+            >
+              <ChevronUp size={18} />
+            </button>
+            <button
+              onClick={() => nextKey && navigate(`/edit/${nextKey}`)}
+              disabled={!nextKey}
+              aria-label="Следующая задача"
+              style={navBtnStyle(!nextKey)}
+            >
+              <ChevronDown size={18} />
+            </button>
+          </div>
         </header>
 
+        {/* Mobile tabs (D-22, <md): Правки | Предпросмотр, default 'edit'. Desktop split below. */}
+        <div
+          role="tablist"
+          aria-label="Режим редактора"
+          className="md:hidden"
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+              setMobileTab((t) => (t === 'edit' ? 'preview' : 'edit'));
+              const target = e.key === 'ArrowRight' ? 'tab-preview' : 'tab-edit';
+              document.getElementById(target)?.focus();
+            }
+          }}
+          style={{ display: 'flex', gap: 8, marginBottom: 16 }}
+        >
+          <button
+            role="tab"
+            id="tab-edit"
+            aria-selected={mobileTab === 'edit'}
+            aria-controls="panel-edit"
+            onClick={() => setMobileTab('edit')}
+            style={tabBtnStyle(mobileTab === 'edit')}
+          >
+            Правки
+          </button>
+          <button
+            role="tab"
+            id="tab-preview"
+            aria-selected={mobileTab === 'preview'}
+            aria-controls="panel-preview"
+            onClick={() => setMobileTab('preview')}
+            style={tabBtnStyle(mobileTab === 'preview')}
+          >
+            Предпросмотр
+          </button>
+        </div>
+
         {/* Desktop (md+): split — meta+textarea left, sticky preview right (D-03).
-            Mobile (<md): single column, stacked — Plan 04 replaces with tabs. */}
+            Mobile (<md): tab panels — only the active one visible (D-22). */}
         <div className="md:grid md:grid-cols-2 md:gap-6">
-          {/* Left: editor */}
-          <div>
+          {/* Edit panel: visible on mobile only when 'edit' tab active; always on desktop. */}
+          <div
+            role="tabpanel"
+            id="panel-edit"
+            aria-labelledby="tab-edit"
+            className={mobileTab === 'edit' ? 'block md:block' : 'hidden md:block'}
+          >
             <label htmlFor="release-note-editor" style={{ display: 'block', marginBottom: 8 }}>
               Release note для {key}
             </label>
             <textarea
+              ref={textareaRef}
               id="release-note-editor"
               value={text}
               onChange={handleChange}
@@ -135,8 +225,13 @@ export function EditPage() {
             </p>
           </div>
 
-          {/* Right: sticky preview (D-03) */}
-          <div>
+          {/* Preview panel: visible on mobile only when 'preview' tab active; always on desktop. */}
+          <div
+            role="tabpanel"
+            id="panel-preview"
+            aria-labelledby="tab-preview"
+            className={mobileTab === 'preview' ? 'block md:block' : 'hidden md:block'}
+          >
             <div
               style={{
                 position: 'sticky',
@@ -216,3 +311,35 @@ const resetBtnDisabledStyle: React.CSSProperties = {
   opacity: 0.5,
   cursor: 'not-allowed',
 };
+
+function navBtnStyle(disabled: boolean): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    border: '1px solid var(--border)',
+    background: 'var(--surface)',
+    borderRadius: 8,
+    cursor: 'pointer',
+  };
+  if (disabled) {
+    return { ...base, color: 'var(--text-muted)', opacity: 0.4, cursor: 'not-allowed' };
+  }
+  return { ...base, color: 'var(--text)' };
+}
+
+function tabBtnStyle(selected: boolean): React.CSSProperties {
+  return {
+    flex: 1,
+    padding: '0.5rem 1rem',
+    border: '1px solid ' + (selected ? 'var(--accent)' : 'var(--border)'),
+    background: selected ? 'var(--accent)' : 'transparent',
+    color: selected ? '#fff' : 'var(--text-muted)',
+    borderRadius: 8,
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+  };
+}
