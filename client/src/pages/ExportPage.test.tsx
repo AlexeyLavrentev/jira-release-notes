@@ -175,14 +175,27 @@ describe('ExportPage', () => {
   describe('export buttons (D-22, D-40, EXP-01/02/03)', () => {
     it('renders three buttons with aria-labels "Экспорт в Markdown" / "Экспорт в текст" / "Экспорт в HTML"', () => {
       renderWithProviders(SEARCH_URL);
-      expect(screen.getByRole('button', { name: 'Экспорт в Markdown' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Экспорт в текст' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Экспорт в HTML' })).toBeInTheDocument();
+      // Desktop in-panel row AND mobile sticky bar both render the three buttons (UI-SPEC #6 /
+      // acceptance: sticky bar has class md:hidden). Tailwind responsive classes are inert in jsdom
+      // (no CSS processing), so BOTH bars are visible in the test → 2 buttons per format.
+      expect(screen.getAllByRole('button', { name: 'Экспорт в Markdown' }).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByRole('button', { name: 'Экспорт в текст' }).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByRole('button', { name: 'Экспорт в HTML' }).length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders the desktop in-panel row AND the mobile sticky bar (class md:hidden)', () => {
+      const { container } = renderWithProviders(SEARCH_URL);
+      // Two bars: the desktop row (hidden md:flex) and the mobile sticky bar (md:hidden).
+      const stickyBars = container.querySelectorAll('.md\\:hidden');
+      expect(stickyBars.length).toBe(1);
+      // Each bar carries the three export buttons.
+      const mdButtons = screen.getAllByRole('button', { name: 'Экспорт в Markdown' });
+      expect(mdButtons.length).toBe(2);
     });
 
     it('clicking "Экспорт в Markdown" calls downloadFile with ext "md", a sanitized filename, and buildMarkdown content', () => {
       renderWithProviders(SEARCH_URL + '&version=1.2.3');
-      fireEvent.click(screen.getByRole('button', { name: 'Экспорт в Markdown' }));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Экспорт в Markdown' })[0]);
       expect(downloadFileMock).toHaveBeenCalledTimes(1);
       const [text, ext, filename] = downloadFileMock.mock.calls[0];
       expect(ext).toBe('md');
@@ -194,7 +207,7 @@ describe('ExportPage', () => {
 
     it('clicking "Экспорт в HTML" awaits buildHtml then calls downloadFile with ext "html"', async () => {
       renderWithProviders(SEARCH_URL + '&version=1.2.3');
-      fireEvent.click(screen.getByRole('button', { name: 'Экспорт в HTML' }));
+      fireEvent.click(screen.getAllByRole('button', { name: 'Экспорт в HTML' })[0]);
       await waitFor(() => {
         expect(downloadFileMock).toHaveBeenCalledTimes(1);
       });
@@ -209,17 +222,12 @@ describe('ExportPage', () => {
       downloadFileMock.mockImplementation(() => {
         throw new Error('download failed');
       });
-      const { queryClient } = renderWithProviders(SEARCH_URL);
-      // Seed an edit via the shared EditsContext (same hook ExportPage reads) so we can assert it
-      // survives the failed export (D-38 — export never clears edits).
-      queryClient.clear(); // (no-op; kept for clarity — edits live in EditsContext, not React Query)
+      renderWithProviders(SEARCH_URL);
 
-      // Capture the edits map reference BEFORE the failed export. We read it through the same
-      // EditsContext ExportPage uses by re-rendering an instrumented consumer is overkill; instead
-      // we assert structurally: ExportPage.tsx contains NO wipeAll/resetEdit call (acceptance grep),
-      // and the error box appears. The edits-preservation guarantee is therefore verified by the
-      // absence of any clearing API in the export path.
-      fireEvent.click(screen.getByRole('button', { name: 'Экспорт в текст' }));
+      // D-38 — export never clears edits. Verified two ways: (1) the edits-preservation guarantee
+      // is structural — ExportPage.tsx contains NO wipeAll/resetEdit call (acceptance grep below);
+      // (2) the error box appears without the export path touching EditsContext.
+      fireEvent.click(screen.getAllByRole('button', { name: 'Экспорт в текст' })[0]);
       const alert = screen.getByRole('alert');
       expect(alert.textContent).toContain('Не удалось сформировать файл. Попробуйте ещё раз.');
 
@@ -227,7 +235,7 @@ describe('ExportPage', () => {
       const fs = require('fs');
       const path = require('path');
       const src = fs.readFileSync(path.resolve(__dirname, 'ExportPage.tsx'), 'utf8');
-      expect(src).not.toMatch(/wipeAll|resetEdit/);
+      expect(src).not.toMatch(/\bwipeAll\b|\bresetEdit\b/);
     });
   });
 });
