@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
+import { useEdits } from '../context/EditsContext.js';
 
 interface MobileIssueCardProps {
   issue: Issue;
@@ -21,6 +23,9 @@ const CARD_BG: Record<ValidationCategory, string> = {
  */
 export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
+  const { edits } = useEdits();
+  const isEdited = Object.prototype.hasOwnProperty.call(edits, issue.key);
 
   function Flag() {
     const size = 18;
@@ -45,8 +50,16 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
         <Flag />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'center' }}>
             <code style={{ fontSize: '0.75rem', fontWeight: 600 }}>{issue.key}</code>
+            {isEdited && (
+              <Pencil
+                size={11}
+                aria-label="Отредактировано"
+                title="Отредактировано"
+                style={{ verticalAlign: 'middle', color: 'var(--accent)' }}
+              />
+            )}
             {issue.issuetype.iconUrl && (
               <img src={issue.issuetype.iconUrl} alt="" style={{ width: 14, height: 14, verticalAlign: 'middle' }} />
             )}
@@ -68,8 +81,35 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
               )}
             </div>
           )}
+          {/* Edit button — always visible, stopPropagation prevents toggling the card expand (D-02) */}
+          <button
+            aria-label={`Редактировать ${issue.key}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/edit/${issue.key}`);
+            }}
+            style={mobileEditBtnStyle}
+          >
+            <Pencil size={14} aria-hidden="true" /> Редактировать
+          </button>
+        </div>
         </div>
       </div>
     </div>
   );
 }
+
+const mobileEditBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  marginTop: '0.5rem',
+  padding: '0.25rem 0.625rem',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  borderRadius: 6,
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  cursor: 'pointer',
+};

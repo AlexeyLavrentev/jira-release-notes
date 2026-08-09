@@ -39,7 +39,7 @@ export function EditPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { edits, setEdit } = useEdits();
+  const { edits, setEdit, resetEdit } = useEdits();
 
   const searchBody = rebuildSearchBody(searchParams);
   const data = searchBody ? queryClient.getQueryData<SearchResponse>(searchQueryKey(searchBody)) : undefined;
@@ -58,6 +58,14 @@ export function EditPage() {
     const next = e.target.value;
     setText(next);
     if (key) setEdit(key, next);
+  }
+
+  const isEdited = key ? Object.prototype.hasOwnProperty.call(edits, key) : false;
+
+  function handleReset() {
+    if (!key) return;
+    resetEdit(key);
+    setText(issue?.releaseNote ?? '');
   }
 
   // D-05: direct URL or stale cache → empty state, no crash.
@@ -145,7 +153,18 @@ export function EditPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 8px' }}>
+          Правки сохраняются автоматически в этой вкладке
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', marginTop: 8 }}>
+          <button
+            onClick={handleReset}
+            disabled={!isEdited}
+            aria-label="Сбросить к оригиналу"
+            style={isEdited ? resetBtnStyle : resetBtnDisabledStyle}
+          >
+            Сбросить
+          </button>
           <button onClick={() => navigate('/select')} style={doneBtnStyle}>
             Готово
           </button>
@@ -179,4 +198,21 @@ const doneBtnStyle: React.CSSProperties = {
   fontWeight: 600,
   fontSize: '0.9375rem',
   cursor: 'pointer',
+};
+
+const resetBtnStyle: React.CSSProperties = {
+  padding: '0.5rem 1.25rem',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'transparent',
+  color: 'var(--text-muted)',
+  fontWeight: 500,
+  fontSize: '0.9375rem',
+  cursor: 'pointer',
+};
+
+const resetBtnDisabledStyle: React.CSSProperties = {
+  ...resetBtnStyle,
+  opacity: 0.5,
+  cursor: 'not-allowed',
 };

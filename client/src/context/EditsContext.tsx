@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import { useSessionEdits, type EditsApi } from '../hooks/useSessionEdits.js';
 
 /**
@@ -10,6 +10,20 @@ const EditsContext = createContext<EditsApi | null>(null);
 
 export function EditsProvider({ children }: { children: React.ReactNode }) {
   const editsApi = useSessionEdits();
+
+  // Conditional beforeunload listener (D-16, EDIT-04): added ONLY when the edits map is
+  // non-empty, removed (via cleanup) when it empties again. Lives at the provider level so it's
+  // active app-wide whenever edits exist — not just on /edit.
+  useEffect(() => {
+    if (!editsApi.hasEdits) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue set (truthy)
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [editsApi.hasEdits]);
+
   return <EditsContext.Provider value={editsApi}>{children}</EditsContext.Provider>;
 }
 

@@ -133,6 +133,7 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
             <Th>Fix Version</Th>
             <Th>Release Note</Th>
             <Th>Флаг</Th>
+            <Th>Действия</Th>
           </tr>
         </thead>
         <tbody>

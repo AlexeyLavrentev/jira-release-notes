@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
+import { useEdits } from '../context/EditsContext.js';
 
 interface IssueRowProps {
   issue: Issue;
@@ -35,6 +37,11 @@ const FLAG_LABEL: Record<ValidationCategory, string> = {
  */
 export function IssueRow({ issue, category }: IssueRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
+  const { edits } = useEdits();
+  // D-17: edits map is NEVER cleared on search/project change — isEdited is recomputed per row
+  // from the shared context map.
+  const isEdited = Object.prototype.hasOwnProperty.call(edits, issue.key);
 
   function FlagIcon() {
     const size = 16;
@@ -53,6 +60,14 @@ export function IssueRow({ issue, category }: IssueRowProps) {
       >
         <td style={cellStyle}>
           <code style={{ fontSize: '0.75rem' }}>{issue.key}</code>
+          {isEdited && (
+            <Pencil
+              size={12}
+              aria-label="Отредактировано"
+              title="Отредактировано"
+              style={{ marginLeft: 4, verticalAlign: 'middle', color: 'var(--accent)' }}
+            />
+          )}
         </td>
         <td style={cellStyle}>{issue.summary}</td>
         <td style={cellStyle}>
@@ -85,10 +100,22 @@ export function IssueRow({ issue, category }: IssueRowProps) {
         <td style={cellStyle}>
           <FlagIcon />
         </td>
+        <td style={cellStyle}>
+          <button
+            aria-label={`Редактировать ${issue.key}`}
+            onClick={(e) => {
+              e.stopPropagation(); // CRITICAL — without it the click toggles the row expand (D-02)
+              navigate(`/edit/${issue.key}`);
+            }}
+            style={editBtnStyle}
+          >
+            <Pencil size={14} aria-hidden="true" /> Редактировать
+          </button>
+        </td>
       </tr>
       {expanded && (
         <tr style={{ background: 'var(--bg)' }}>
-          <td colSpan={9} style={{ padding: '1rem 1.5rem' }}>
+          <td colSpan={10} style={{ padding: '1rem 1.5rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8125rem' }}>
               <div>
                 <strong>Release Note:</strong>
@@ -124,6 +151,20 @@ const cellStyle: React.CSSProperties = {
   padding: '0.5rem 0.75rem',
   verticalAlign: 'top',
   fontSize: '0.8125rem',
+};
+
+const editBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '0.25rem 0.625rem',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  borderRadius: 6,
+  fontSize: '0.75rem',
+  fontWeight: 500,
+  cursor: 'pointer',
 };
 
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
