@@ -81,8 +81,7 @@ export function createJiraClient(config: Config) {
     let total = 0;
     let actualMaxResults = SEARCH_PAGE_SIZE;
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    for (;;) {
       const body = { jql, startAt, maxResults: SEARCH_PAGE_SIZE, fields };
       const page = await fetchWithRetry(
         () => request<JiraSearchResponse>('/rest/api/2/search', { method: 'POST', body, signal }),
