@@ -93,7 +93,6 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
             <Pencil size={14} aria-hidden="true" /> Редактировать
           </button>
         </div>
-        </div>
       </div>
     </div>
   );
