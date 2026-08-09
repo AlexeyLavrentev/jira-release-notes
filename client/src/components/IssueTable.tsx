@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { SearchResponse } from '../../../shared/types/issue';
 import { IssueRow } from './IssueRow.js';
@@ -29,6 +30,8 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
   const [validationFilter, setValidationFilter] = useState<ValidationFilterMode>('all');
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  // D-02 — instant React Router swap to /export (no transition/animation code per D-36).
+  const navigate = useNavigate();
 
   const issues = data?.issues ?? [];
   const categories = useMemo(() => validateIssues(issues), [issues]);
@@ -118,7 +121,20 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
         </div>
       )}
 
-      <ValidationFilter counts={counts} activeFilter={validationFilter} onFilterChange={setValidationFilter} />
+      {/* D-02 — «Собрать документ» entry button joins the ValidationFilter + counters row
+          (appears only when issues exist — this block is after the issues.length===0 guard).
+          Inline-right placement in a flex wrapper; the button sits to the right of the filter. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+        <ValidationFilter counts={counts} activeFilter={validationFilter} onFilterChange={setValidationFilter} />
+        <button
+          type="button"
+          onClick={() => navigate('/export')}
+          aria-label="Собрать документ release notes"
+          style={buildDocBtnStyle}
+        >
+          Собрать документ
+        </button>
+      </div>
 
       {/* Desktop table (D-18, md+) */}
       <table className="hidden md:table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
@@ -254,5 +270,21 @@ const btnStyle: React.CSSProperties = {
   background: 'transparent',
   color: 'var(--error)',
   fontWeight: 500,
+  cursor: 'pointer',
+};
+
+/**
+ * buildDocBtnStyle (D-02, UI-SPEC #8) — byte-identical to EditPage.doneBtnStyle: solid accent
+ * background, white text, 600 weight, 8px radius, 1px solid accent border. The entry CTA is the
+ * single primary action of the /select → /export flow.
+ */
+const buildDocBtnStyle: React.CSSProperties = {
+  padding: '0.5rem 1.5rem',
+  borderRadius: 8,
+  border: '1px solid var(--accent)',
+  background: 'var(--accent)',
+  color: '#fff',
+  fontWeight: 600,
+  fontSize: '0.9375rem',
   cursor: 'pointer',
 };
