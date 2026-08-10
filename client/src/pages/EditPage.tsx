@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, Ban } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
+import { validateReleaseNote, SKIP_MARKER } from '../lib/validation.js';
 import { Preview } from '../components/Preview.js';
 import { StateView } from '../components/StateView.js';
 import type { SearchResponse } from '../../../shared/types/issue';
@@ -66,6 +67,13 @@ export function EditPage() {
     // edits + issue intentionally re-derived each key change
   }, [key]);
 
+  // D-13/D-18 — skip status is derived from the SAME edits-priority resolution the rest of the
+  // page uses (edits[key] ?? issue.releaseNote). If the engineer removed the marker and wrote real
+  // text, validateReleaseNote returns non-skip → isSkip is false → the normal editable textarea
+  // renders (D-18 reactivation). Only a field that IS the marker (or an edit equal to it) is skip.
+  const resolvedText = key ? (edits[key] ?? issue?.releaseNote ?? '') : '';
+  const isSkip = validateReleaseNote(resolvedText) === 'skip';
+
   // Esc = back to /select (D-23). window listener catches Esc even while the textarea is focused.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -76,6 +84,9 @@ export function EditPage() {
   }, [navigate]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    // D-13 — a skip issue cannot be edited. Defense-in-depth: the textarea is not even rendered
+    // for skip (see the edit panel conditional below), but the guard keeps the write path airtight.
+    if (isSkip) return;
     const next = e.target.value;
     setText(next);
     if (key) setEdit(key, next);
@@ -201,33 +212,64 @@ export function EditPage() {
             aria-labelledby="tab-edit"
             className={mobileTab === 'edit' ? 'block md:block' : 'hidden md:block'}
           >
-            <label htmlFor="release-note-editor" style={{ display: 'block', marginBottom: 8 }}>
-              Release note для {key}
-            </label>
-            <textarea
-              ref={textareaRef}
-              id="release-note-editor"
-              value={text}
-              onChange={handleChange}
-              placeholder="Введите текст release note (markdown)..."
-              autoFocus
-              style={{
-                width: '100%',
-                minHeight: '60vh',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                fontSize: '0.9375rem',
-                lineHeight: 1.6,
-                padding: 12,
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                background: 'var(--surface)',
-                color: 'var(--text)',
-                resize: 'vertical',
-              }}
-            />
-            <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)', margin: '4px 0 16px' }}>
-              {text.length} символов
-            </p>
+            {isSkip ? (
+              // D-13/D-14 — read-only display block for skip issues. NO textarea (the engineer
+              // cannot edit it). Summary + the marker as display text, opacity 0.5 + strikethrough
+              // + Ban icon, reusing the resetBtnDisabledStyle opacity idiom for the disabled look.
+              <div style={{ padding: '1rem 1.25rem', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)', opacity: 0.5 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Ban size={18} color="var(--text-tertiary)" aria-label="Пропущено (маркер <no-release-notes>)" />
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem', fontWeight: 600 }}>
+                    Задача пропущена из release notes
+                  </span>
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '0.9375rem',
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    color: 'var(--text-muted)',
+                    textDecoration: 'line-through',
+                  }}
+                >
+                  {SKIP_MARKER}
+                </p>
+                <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>
+                  Чтобы вернуть задачу в документ — очистите поле в Jira и впишите release note, либо
+                  удалите маркер и введите текст.
+                </p>
+              </div>
+            ) : (
+              <>
+                <label htmlFor="release-note-editor" style={{ display: 'block', marginBottom: 8 }}>
+                  Release note для {key}
+                </label>
+                <textarea
+                  ref={textareaRef}
+                  id="release-note-editor"
+                  value={text}
+                  onChange={handleChange}
+                  placeholder="Введите текст release note (markdown)..."
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    minHeight: '60vh',
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    fontSize: '0.9375rem',
+                    lineHeight: 1.6,
+                    padding: 12,
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    resize: 'vertical',
+                  }}
+                />
+                <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)', margin: '4px 0 16px' }}>
+                  {text.length} символов
+                </p>
+              </>
+            )}
           </div>
 
           {/* Preview panel: visible on mobile only when 'preview' tab active; always on desktop. */}
