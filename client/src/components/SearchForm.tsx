@@ -29,6 +29,9 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
   const [dateFrom, setDateFrom] = useState(initialValues?.dateFrom ?? '');
   const [dateTo, setDateTo] = useState(initialValues?.dateTo ?? '');
   const [showUnreleased, setShowUnreleased] = useState(false);
+  // D-06: closedOnly defaults to ON (smart out-of-the-box). D-08: one state for all modes,
+  // persists across tab switches. Default via `?? true` (unlike showUnreleased's `?? false`).
+  const [closedOnly, setClosedOnly] = useState(initialValues?.closedOnly ?? true);
 
   const projectsQuery = useProjects();
   const versionsQuery = useVersions(project || null);
@@ -58,6 +61,9 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
       body.dateFrom = dateFrom;
       body.dateTo = dateTo;
     }
+    // D-05/D-08: closedOnly is sent for ALL modes (unconditional, not mode-gated) so the
+    // React Query cache key is deterministic (useSearch.ts byte-identity contract).
+    body.closedOnly = closedOnly;
     onSubmit(body);
   }
 
@@ -182,23 +188,35 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
           ))}
         </div>
       )}
-      <button
-        type="submit"
-        disabled={!isValid}
-        style={{
-          padding: 'var(--space-2) var(--space-5)',
-          borderRadius: 'var(--radius-md)',
-          border: 'none',
-          background: isValid ? 'var(--accent)' : 'var(--border)',
-          color: isValid ? '#fff' : 'var(--text-muted)',
-          fontWeight: 600,
-          fontSize: 'var(--font-sm)',
-          cursor: isValid ? 'pointer' : 'not-allowed',
-          alignSelf: 'flex-start',
-        }}
-      >
-        Найти
-      </button>
+      {/* Submit row (D-05): the closed-only toggle sits next to «Найти». Rendered ONCE outside
+          the per-mode blocks so it applies to all tabs and its state persists across tab switches
+          (D-08). Native checkbox + label per D-07 (not a switch/segmented control). */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <input
+            type="checkbox"
+            checked={closedOnly}
+            onChange={(e) => setClosedOnly(e.target.checked)}
+          />
+          <span style={{ fontSize: 'var(--font-xs)' }}>Только закрытые</span>
+        </label>
+        <button
+          type="submit"
+          disabled={!isValid}
+          style={{
+            padding: 'var(--space-2) var(--space-5)',
+            borderRadius: 'var(--radius-md)',
+            border: 'none',
+            background: isValid ? 'var(--accent)' : 'var(--border)',
+            color: isValid ? '#fff' : 'var(--text-muted)',
+            fontWeight: 600,
+            fontSize: 'var(--font-sm)',
+            cursor: isValid ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Найти
+        </button>
+      </div>
     </form>
   );
 }
