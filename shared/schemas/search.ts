@@ -11,6 +11,12 @@ export const SearchBodySchema = z.object({
   fixVersion: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
+  /**
+   * When true, the backend injects `AND statusCategory = Done` into the built JQL
+   * so only closed issues are returned (CONTEXT.md D-03, D-06 — smart out-of-the-box).
+   * Defaults to true; clients may send false to broaden to all statuses (FILT-02).
+   */
+  closedOnly: z.boolean().optional().default(true),
 });
 
 export type SearchBody = z.infer<typeof SearchBodySchema>;

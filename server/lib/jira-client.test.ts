@@ -51,6 +51,58 @@ describe('buildJql', () => {
     const jql = buildJql({ mode: 'jql', project: 'TE;ST' } as SearchBody);
     expect(jql).toContain('project = TEST');
   });
+
+  it('mode=fixVersion + closedOnly=true adds statusCategory = Done before ORDER BY', () => {
+    const jql = buildJql({
+      mode: 'fixVersion',
+      project: 'PROJ',
+      fixVersion: 'v1.0',
+      closedOnly: true,
+    } as SearchBody);
+    expect(jql).toBe(
+      'project = PROJ AND fixVersion = "v1.0" AND statusCategory = Done ORDER BY resolution DESC, priority DESC',
+    );
+  });
+
+  it('mode=fixVersion + closedOnly=false omits statusCategory', () => {
+    const jql = buildJql({
+      mode: 'fixVersion',
+      project: 'PROJ',
+      fixVersion: 'v1.0',
+      closedOnly: false,
+    } as SearchBody);
+    expect(jql).toBe(
+      'project = PROJ AND fixVersion = "v1.0" ORDER BY resolution DESC, priority DESC',
+    );
+    expect(jql).not.toContain('statusCategory');
+  });
+
+  it('mode=dateRange + closedOnly=true adds statusCategory = Done before ORDER BY', () => {
+    const jql = buildJql({
+      mode: 'dateRange',
+      project: 'PROJ',
+      dateFrom: '2026-01-01',
+      dateTo: '2026-02-01',
+      closedOnly: true,
+    } as SearchBody);
+    expect(jql).toContain('AND statusCategory = Done ORDER BY resolution DESC, priority DESC');
+  });
+
+  it('mode=dateRange + closedOnly=false omits statusCategory', () => {
+    const jql = buildJql({
+      mode: 'dateRange',
+      project: 'PROJ',
+      dateFrom: '2026-01-01',
+      closedOnly: false,
+    } as SearchBody);
+    expect(jql).not.toContain('statusCategory');
+  });
+
+  it('closedOnly omitted (cast only) leaves output unchanged — no statusCategory', () => {
+    const jql = buildJql({ mode: 'fixVersion', project: 'PROJ', fixVersion: 'v1.0' } as SearchBody);
+    expect(jql).toBe('project = PROJ AND fixVersion = "v1.0" ORDER BY resolution DESC, priority DESC');
+    expect(jql).not.toContain('statusCategory');
+  });
 });
 
 describe('parseVersion', () => {
