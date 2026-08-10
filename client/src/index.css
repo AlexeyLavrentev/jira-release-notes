@@ -97,3 +97,27 @@ textarea,
   transition: background-color var(--transition-fast),
     border-color var(--transition-fast), color var(--transition-fast);
 }
+
+/* Shimmer loading animation (CONTEXT.md D-13) — a gentle opacity pulse used by StateView's
+   loading variant instead of a static skeleton block. The bars read as "alive" without a
+   distracting linear sweep (apple-design §1 — be vigilant about latency/motion).
+   Reduced-motion: degrade to a static 0.6-opacity bar — no animation (apple-design §14). */
+@keyframes rn-shimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.rn-shimmer {
+  background: var(--border);
+  animation: rn-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rn-shimmer {
+    animation: none;
+    opacity: 0.6;
+  }
+}
