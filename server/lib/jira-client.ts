@@ -189,6 +189,11 @@ export function createJiraClient(config: Config) {
 /**
  * Build JQL from a structured search body (CONTEXT.md D-02, D-15).
  * Always appends ORDER BY resolution DESC, priority DESC.
+ *
+ * When `body.closedOnly` is truthy, appends `AND statusCategory = Done` before the
+ * ORDER BY suffix (Phase 8 D-01, D-04). statusCategory = Done is the ONLY closed-state
+ * mechanism — no `status IN (...)` fallback. JQL mode is gated by hasStatusClause() to
+ * avoid duplicating a status reference the user already wrote (D-02, FILT-03).
  */
 export function buildJql(body: SearchBody): string {
   let jql: string;
@@ -207,12 +212,35 @@ export function buildJql(body: SearchBody): string {
       break;
     }
   }
+  // D-01/D-04: append statusCategory = Done for closed-only filtering. Truthy guard
+  // so unit-test casts that omit closedOnly (literal undefined) add nothing, while
+  // production-safeParse output (always a defined boolean via z.preprocess) honors
+  // the client's choice.
+  if (body.closedOnly) {
+    // D-02/FILT-03: in jql mode, skip the filter if the user's own query already
+    // references status/statusCategory to avoid a double-filter or empty result.
+    const hasUserStatus = body.mode === 'jql' && hasStatusClause(body.jql ?? '');
+    if (!hasUserStatus) {
+      jql = `${jql} AND statusCategory = Done`;
+    }
+  }
   return `${jql} ORDER BY resolution DESC, priority DESC`;
 }
 
 /** Escape a bare identifier (project key) for JQL. */
 function escapeJql(s: string): string {
   return s.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+/**
+ * Detect whether a user-supplied JQL string already references a status clause
+ * (Phase 8 D-02, FILT-03). Case-insensitive substring match for `status`.
+ *
+ * `status` is a substring of `statusCategory`, so this single check covers BOTH
+ * terms named in D-02 — no separate `statusCategory` probe is needed.
+ */
+function hasStatusClause(userJql: string): boolean {
+  return userJql.toLowerCase().includes('status');
 }
 
 /** Escape a quoted value for JQL (version name, date). */

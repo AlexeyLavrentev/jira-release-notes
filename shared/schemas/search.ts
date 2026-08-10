@@ -14,9 +14,16 @@ export const SearchBodySchema = z.object({
   /**
    * When true, the backend injects `AND statusCategory = Done` into the built JQL
    * so only closed issues are returned (CONTEXT.md D-03, D-06 — smart out-of-the-box).
-   * Defaults to true; clients may send false to broaden to all statuses (FILT-02).
+   * May be sent false to broaden to all statuses (FILT-02).
+   *
+   * The default-true is applied via z.preprocess so `SearchBodySchema.safeParse` always
+   * yields `closedOnly: true` when the client omits it (D-06), while `z.infer` keeps the
+   * field OPTIONAL — client code that builds a SearchBody before parsing (SearchForm,
+   * SelectPage, ExportPage URL rebuild) does not have to supply it. This differs from
+   * `.optional().default(true)`, which would make the parsed-output type require the
+   * field and break those client constructors.
    */
-  closedOnly: z.boolean().optional().default(true),
+  closedOnly: z.preprocess((v) => (v === undefined ? true : v), z.boolean().optional()),
 });
 
 export type SearchBody = z.infer<typeof SearchBodySchema>;
