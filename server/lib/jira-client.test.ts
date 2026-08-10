@@ -103,6 +103,63 @@ describe('buildJql', () => {
     expect(jql).toBe('project = PROJ AND fixVersion = "v1.0" ORDER BY resolution DESC, priority DESC');
     expect(jql).not.toContain('statusCategory');
   });
+
+  // --- Task 2: JQL-mode conflict detection (D-02 / FILT-03) ---
+
+  it('jql + closedOnly=true + query with "status" → does NOT add statusCategory (conflict)', () => {
+    const jql = buildJql({
+      mode: 'jql',
+      project: 'X',
+      jql: 'project = X AND status = Done',
+      closedOnly: true,
+    } as SearchBody);
+    expect(jql).toBe('project = X AND status = Done ORDER BY resolution DESC, priority DESC');
+    expect(jql).not.toContain('statusCategory = Done');
+  });
+
+  it('jql + closedOnly=true + query with mixed-case "StatusCategory" → does NOT add', () => {
+    const jql = buildJql({
+      mode: 'jql',
+      project: 'X',
+      jql: 'project = X AND StatusCategory = Done',
+      closedOnly: true,
+    } as SearchBody);
+    expect(jql).toBe('project = X AND StatusCategory = Done ORDER BY resolution DESC, priority DESC');
+    expect(jql).not.toContain('AND statusCategory = Done');
+  });
+
+  it('jql + closedOnly=true + uppercase "STATUS" → does NOT add (case-insensitive detect)', () => {
+    const jql = buildJql({
+      mode: 'jql',
+      project: 'X',
+      jql: 'project = X AND STATUS = "In Progress"',
+      closedOnly: true,
+    } as SearchBody);
+    expect(jql).not.toContain('AND statusCategory = Done');
+  });
+
+  it('jql + closedOnly=true + query WITHOUT status reference → DOES add statusCategory', () => {
+    const jql = buildJql({
+      mode: 'jql',
+      project: 'X',
+      jql: 'assignee = me',
+      closedOnly: true,
+    } as SearchBody);
+    expect(jql).toBe(
+      'assignee = me AND statusCategory = Done ORDER BY resolution DESC, priority DESC',
+    );
+  });
+
+  it('jql + closedOnly=false → never adds statusCategory regardless of query content', () => {
+    const jql = buildJql({
+      mode: 'jql',
+      project: 'X',
+      jql: 'assignee = me',
+      closedOnly: false,
+    } as SearchBody);
+    expect(jql).toBe('assignee = me ORDER BY resolution DESC, priority DESC');
+    expect(jql).not.toContain('statusCategory');
+  });
 });
 
 describe('parseVersion', () => {
