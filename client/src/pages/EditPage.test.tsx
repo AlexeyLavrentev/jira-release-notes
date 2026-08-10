@@ -8,10 +8,12 @@ import { searchQueryKey } from '../hooks/useSearch.js';
 import type { SearchResponse, Issue } from '../../../shared/types/issue';
 import type { SearchBody } from '../../../shared/schemas/search';
 
-const searchBody: SearchBody = { mode: 'jql', project: 'PROJ', jql: 'project = PROJ' };
+const searchBody: SearchBody = { mode: 'jql', project: 'PROJ', jql: 'project = PROJ', closedOnly: true };
 // URL query MUST encode the SAME jql used in searchBody — the cache is keyed by
 // the decoded SearchBody, so a mismatch (e.g. 'x' vs 'project = PROJ') misses
-// the cache and EditPage shows the empty state.
+// the cache and EditPage shows the empty state. closedOnly is absent from the URL
+// → rebuildSearchBody reconstructs it as true (default ON, D-06), so the seeded
+// searchBody MUST also carry closedOnly: true or the cache key misses.
 const SEARCH_URL = '/edit/PROJ-1?project=PROJ&mode=jql&jql=' + encodeURIComponent('project = PROJ');
 
 const sampleIssue = {

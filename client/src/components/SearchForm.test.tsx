@@ -103,6 +103,7 @@ describe('SearchForm', () => {
       mode: 'jql',
       project: 'PROJ',
       jql: 'status = Done',
+      closedOnly: true,
     });
     // sanity: container present (no crash during submit)
     expect(container).toBeTruthy();
@@ -134,6 +135,7 @@ describe('SearchForm', () => {
       mode: 'fixVersion',
       project: 'PROJ',
       fixVersion: 'v1.0',
+      closedOnly: true,
     });
   });
 
@@ -156,6 +158,7 @@ describe('SearchForm', () => {
       project: 'PROJ',
       dateFrom: '2026-01-01',
       dateTo: '2026-02-01',
+      closedOnly: true,
     });
   });
 

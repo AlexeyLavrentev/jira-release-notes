@@ -34,6 +34,7 @@ export function SelectPage() {
       if (fixVersion) body.fixVersion = fixVersion;
       if (dateFrom) body.dateFrom = dateFrom;
       if (dateTo) body.dateTo = dateTo;
+      body.closedOnly = searchParams.get('closedOnly') !== '0';
       setSearchBody(body);
     }
     // Mount-only: intentionally empty deps (restore from URL once on mount)
@@ -53,6 +54,7 @@ export function SelectPage() {
     if (body.fixVersion) params.fixVersion = body.fixVersion;
     if (body.dateFrom) params.dateFrom = body.dateFrom;
     if (body.dateTo) params.dateTo = body.dateTo;
+    if (body.closedOnly === false) params.closedOnly = '0';
     setSearchParams(params);
     setSearchBody(body);
   }
@@ -67,6 +69,7 @@ export function SelectPage() {
           fixVersion: searchParams.get('fixVersion') ?? undefined,
           dateFrom: searchParams.get('dateFrom') ?? undefined,
           dateTo: searchParams.get('dateTo') ?? undefined,
+          closedOnly: searchParams.get('closedOnly') !== '0',
         }
       : undefined;
 

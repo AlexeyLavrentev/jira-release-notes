@@ -33,6 +33,7 @@ function rebuildSearchBody(searchParams: URLSearchParams): SearchBody | null {
   if (fixVersion) body.fixVersion = fixVersion;
   if (dateFrom) body.dateFrom = dateFrom;
   if (dateTo) body.dateTo = dateTo;
+  body.closedOnly = searchParams.get('closedOnly') !== '0';
   return body;
 }
 
