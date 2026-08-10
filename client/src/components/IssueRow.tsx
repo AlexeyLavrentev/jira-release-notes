@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
+import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
 import { useEdits } from '../context/EditsContext.js';
 
 interface IssueRowProps {
@@ -43,6 +44,8 @@ export function IssueRow({ issue, category }: IssueRowProps) {
   // D-17: edits map is NEVER cleared on search/project change — isEdited is recomputed per row
   // from the shared context map.
   const isEdited = Object.prototype.hasOwnProperty.call(edits, issue.key);
+  // UI-03 (D-04, D-05): issuetype icon from the centralized lucide mapping + semantic color.
+  const { Icon: TypeIcon, color: typeColor } = getIssueTypeIcon(issue.issuetype.name);
 
   function FlagIcon() {
     const size = 16;
@@ -62,19 +65,14 @@ export function IssueRow({ issue, category }: IssueRowProps) {
         <td style={cellStyle}>
           <code style={{ fontSize: '0.75rem' }}>{issue.key}</code>
           {isEdited && (
-            <Pencil
-              size={12}
-              aria-label="Отредактировано"
-              title="Отредактировано"
-              style={{ marginLeft: 4, verticalAlign: 'middle', color: 'var(--accent)' }}
-            />
+            <span title="Отредактировано" aria-label="Отредактировано" style={{ marginLeft: 4, verticalAlign: 'middle', color: 'var(--accent)' }}>
+              <Pencil size={12} aria-hidden="true" style={{ verticalAlign: 'middle' }} />
+            </span>
           )}
         </td>
         <td style={cellStyle}>{issue.summary}</td>
         <td style={cellStyle}>
-          {issue.issuetype.iconUrl && (
-            <img src={issue.issuetype.iconUrl} alt="" style={{ width: 16, height: 16, verticalAlign: 'middle', marginRight: 4 }} />
-          )}
+          <TypeIcon size={16} color={typeColor} aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 4 }} />
           {issue.issuetype.name}
         </td>
         <td style={cellStyle}>{issue.status.name}</td>

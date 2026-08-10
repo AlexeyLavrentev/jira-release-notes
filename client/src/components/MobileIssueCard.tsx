@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
+import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
 import { useEdits } from '../context/EditsContext.js';
 
 interface MobileIssueCardProps {
@@ -27,6 +28,8 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
   const [searchParams] = useSearchParams();
   const { edits } = useEdits();
   const isEdited = Object.prototype.hasOwnProperty.call(edits, issue.key);
+  // UI-03 (D-04, D-05): issuetype icon from the centralized lucide mapping + semantic color.
+  const { Icon: TypeIcon, color: typeColor } = getIssueTypeIcon(issue.issuetype.name);
 
   function Flag() {
     const size = 18;
@@ -54,16 +57,11 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'center' }}>
             <code style={{ fontSize: '0.75rem', fontWeight: 600 }}>{issue.key}</code>
             {isEdited && (
-              <Pencil
-                size={11}
-                aria-label="Отредактировано"
-                title="Отредактировано"
-                style={{ verticalAlign: 'middle', color: 'var(--accent)' }}
-              />
+              <span title="Отредактировано" aria-label="Отредактировано" style={{ verticalAlign: 'middle', color: 'var(--accent)' }}>
+                <Pencil size={11} aria-hidden="true" style={{ verticalAlign: 'middle' }} />
+              </span>
             )}
-            {issue.issuetype.iconUrl && (
-              <img src={issue.issuetype.iconUrl} alt="" style={{ width: 14, height: 14, verticalAlign: 'middle' }} />
-            )}
+            <TypeIcon size={14} color={typeColor} aria-hidden="true" style={{ verticalAlign: 'middle' }} />
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{issue.issuetype.name}</span>
           </div>
           <div style={{ fontWeight: 500, fontSize: '0.875rem', marginBottom: '0.25rem' }}>{issue.summary}</div>
