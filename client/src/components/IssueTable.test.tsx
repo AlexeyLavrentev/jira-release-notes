@@ -169,12 +169,14 @@ describe('IssueTable — «Собрать документ» entry button (D-02)
     expect(src).toContain("border: '1px solid var(--accent)'");
   });
 
-  it('navigate(\'/export\') is wired exactly once (acceptance grep)', () => {
+  it('navigate to /export is wired exactly once (acceptance grep)', () => {
     // Structural assertion mirroring the plan's acceptance grep.
+    // The entry button forwards search params so ExportPage can rebuild the cache key:
+    //   navigate(`/export?${searchParams.toString()}`)
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.resolve(__dirname, 'IssueTable.tsx'), 'utf8');
-    const matches = src.match(/navigate\('\/export'\)/g) ?? [];
+    const matches = src.match(/navigate\(`\/export\?\$\{searchParams\.toString\(\)\}`\)/g) ?? [];
     expect(matches.length).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
@@ -38,6 +38,7 @@ const FLAG_LABEL: Record<ValidationCategory, string> = {
 export function IssueRow({ issue, category }: IssueRowProps) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { edits } = useEdits();
   // D-17: edits map is NEVER cleared on search/project change — isEdited is recomputed per row
   // from the shared context map.
@@ -105,7 +106,7 @@ export function IssueRow({ issue, category }: IssueRowProps) {
             aria-label={`Редактировать ${issue.key}`}
             onClick={(e) => {
               e.stopPropagation(); // CRITICAL — without it the click toggles the row expand (D-02)
-              navigate(`/edit/${issue.key}`);
+              navigate(`/edit/${issue.key}?${searchParams.toString()}`);
             }}
             style={editBtnStyle}
           >

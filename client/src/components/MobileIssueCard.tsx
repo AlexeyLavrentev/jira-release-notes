@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
@@ -24,6 +24,7 @@ const CARD_BG: Record<ValidationCategory, string> = {
 export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { edits } = useEdits();
   const isEdited = Object.prototype.hasOwnProperty.call(edits, issue.key);
 
@@ -86,7 +87,7 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
             aria-label={`Редактировать ${issue.key}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/edit/${issue.key}`);
+              navigate(`/edit/${issue.key}?${searchParams.toString()}`);
             }}
             style={mobileEditBtnStyle}
           >

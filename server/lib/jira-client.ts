@@ -74,8 +74,19 @@ export function createJiraClient(config: Config) {
     jql: string,
     signal?: AbortSignal,
   ): Promise<{ response: JiraSearchResponse; capped: boolean }> {
-    const fields =
-      '*navigable,summary,issuetype,status,priority,components,fixVersions,created,updated,resolutiondate,parent';
+    const fields = [
+      '*navigable',
+      'summary',
+      'issuetype',
+      'status',
+      'priority',
+      'components',
+      'fixVersions',
+      'created',
+      'updated',
+      'resolutiondate',
+      'parent',
+    ];
     const allIssues: JiraRawIssue[] = [];
     let startAt = 0;
     let total = 0;

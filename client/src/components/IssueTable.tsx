@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import type { SearchResponse } from '../../../shared/types/issue';
 import { IssueRow } from './IssueRow.js';
@@ -32,6 +32,7 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   // D-02 — instant React Router swap to /export (no transition/animation code per D-36).
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const issues = data?.issues ?? [];
   const categories = useMemo(() => validateIssues(issues), [issues]);
@@ -128,7 +129,7 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
         <ValidationFilter counts={counts} activeFilter={validationFilter} onFilterChange={setValidationFilter} />
         <button
           type="button"
-          onClick={() => navigate('/export')}
+          onClick={() => navigate(`/export?${searchParams.toString()}`)}
           aria-label="Собрать документ release notes"
           style={buildDocBtnStyle}
         >
