@@ -71,22 +71,24 @@ export function IssueRow({ issue, category }: IssueRowProps) {
           )}
         </td>
         <td style={cellStyle}>{issue.summary}</td>
-        <td style={cellStyle}>
+        {/* D-15 — secondary columns carry `hidden md:table-cell` to match IssueTable's <th>; the
+            table↔card switch (md:block / md:hidden) still owns the <sm phone layout. */}
+        <td className="hidden md:table-cell" style={cellStyle}>
           <TypeIcon size={16} color={typeColor} aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 4 }} />
           {issue.issuetype.name}
         </td>
-        <td style={cellStyle}>{issue.status.name}</td>
-        <td style={cellStyle}>
+        <td className="hidden md:table-cell" style={cellStyle}>{issue.status.name}</td>
+        <td className="hidden md:table-cell" style={cellStyle}>
           {issue.priority && (
             <Badge color={PRIORITY_COLORS[issue.priority.name] ?? 'var(--text-muted)'}>{issue.priority.name}</Badge>
           )}
         </td>
-        <td style={cellStyle}>
+        <td className="hidden md:table-cell" style={cellStyle}>
           {issue.components.length > 0
             ? issue.components.map((c) => <Badge key={c.id} color="var(--text-muted)">{c.name}</Badge>)
             : '—'}
         </td>
-        <td style={cellStyle}>
+        <td className="hidden md:table-cell" style={cellStyle}>
           {issue.fixVersions.length > 0
             ? issue.fixVersions.map((v) => (
                 <Badge key={v.id} color={v.released ? 'var(--success)' : 'var(--text-muted)'}>{v.name}</Badge>

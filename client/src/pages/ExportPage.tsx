@@ -5,6 +5,7 @@ import { ArrowLeft, FileText, FileCode } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
 import { DocumentPreview } from '../components/DocumentPreview.js';
+import { StateView } from '../components/StateView.js';
 import { GroupingControl } from '../components/GroupingControl.js';
 import { SortControl } from '../components/SortControl.js';
 import { DocHeaderInputs } from '../components/DocHeaderInputs.js';
@@ -127,39 +128,39 @@ export function ExportPage() {
     }
   }
 
-  // D-04 — empty state: no cache / no issues. Reuse EditPage's empty-state markup (copy differs).
+  // D-04 — empty state: no cache / no issues. D-13: uses the shared StateView. Copy preserved
+  // verbatim — ExportPage.test.tsx asserts "Сначала найдите задачи" + button "К поиску".
   if (!data || issues.length === 0) {
     return (
       <div
         style={{
           minHeight: '100vh',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '1rem',
           background: 'var(--bg)',
-          color: 'var(--text-muted)',
-          padding: 24,
         }}
       >
-        <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)' }}>
-          Сначала найдите задачи
-        </h1>
-        <p style={{ margin: 0, maxWidth: 420, textAlign: 'center' }}>
-          Откройте поиск, выберите задачи — затем соберите документ.
-        </p>
-        <button onClick={() => navigate('/select')} style={ghostBtnStyle}>
-          К поиску
-        </button>
+        <StateView
+          variant="empty"
+          heading="Сначала найдите задачи"
+          description="Откройте поиск, выберите задачи — затем соберите документ."
+          cta={
+            <button onClick={() => navigate('/select')} style={ghostBtnStyle}>
+              К поиску
+            </button>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
+    // D-14 — responsive horizontal padding via Tailwind on the outer wrapper; inner maxWidth
+    // container keeps vertical padding only (var(--space-5) 0).
+    <div className="px-4 md:px-6" style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
       <style>{EXPORT_CSS}</style>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 24 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-5) 0' }}>
         {/* Mobile tabs (D-27, <md): Контролы | Предпросмотр, default 'preview'. Hidden on desktop.
             Reuses EditPage's tablist pattern verbatim (role=tablist, Arrow L/R focus + switch). */}
         <div

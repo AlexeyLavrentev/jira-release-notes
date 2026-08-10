@@ -5,6 +5,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
 import { Preview } from '../components/Preview.js';
+import { StateView } from '../components/StateView.js';
 import type { SearchResponse } from '../../../shared/types/issue';
 import type { SearchBody } from '../../../shared/schemas/search';
 
@@ -88,7 +89,8 @@ export function EditPage() {
     setText(issue?.releaseNote ?? '');
   }
 
-  // D-05: direct URL or stale cache → empty state, no crash.
+  // D-05: direct URL or stale cache → empty state, no crash. D-13: uses the shared StateView.
+  // Copy preserved verbatim — EditPage.test.tsx asserts "Откройте задачу из списка поиска" + "К списку".
   const emptyState = (!data && !issue) || (data && !issue);
   if (emptyState) {
     return (
@@ -96,27 +98,30 @@ export function EditPage() {
         style={{
           minHeight: '100vh',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '1rem',
           background: 'var(--bg)',
-          color: 'var(--text-muted)',
-          padding: 24,
         }}
       >
-        <p style={{ margin: 0 }}>Откройте задачу из списка поиска</p>
-        <button onClick={() => navigate('/select')} style={doneBtnStyle}>
-          К списку
-        </button>
+        <StateView
+          variant="empty"
+          heading="Откройте задачу из списка поиска"
+          cta={
+            <button onClick={() => navigate('/select')} style={doneBtnStyle}>
+              К списку
+            </button>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
+    // D-14 — responsive horizontal padding via Tailwind on the outer wrapper; the inner
+    // maxWidth container keeps vertical padding only (var(--space-5) 0).
+    <div className="px-4 md:px-6" style={{ background: 'var(--bg)', color: 'var(--text)', minHeight: '100vh' }}>
       <style>{MARKDOWN_TYPOGRAPHY}</style>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 24 }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'var(--space-5) 0' }}>
         <header style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -70,8 +70,10 @@ export function SelectPage() {
         }
       : undefined;
 
+  // D-14 — responsive horizontal padding: 16px (<md) / 24px (md+). Tailwind px-4 md:px-6 on the
+  // outer wrapper; the inner content inherits it.
   return (
-    <div>
+    <div className="px-4 md:px-6">
       <AppHeader />
       <div style={{ position: 'sticky', top: 56, zIndex: 10, background: 'var(--surface)' }}>
         <SearchForm onSubmit={handleSubmit} initialValues={initialValues} />

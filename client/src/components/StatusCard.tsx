@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import type { ConfigResponse } from '../../../shared/types/api';
 import type { ConnectionStatus } from '../../../shared/types/jira';
 
@@ -82,9 +84,46 @@ export function StatusCard({ config, connectionStatus }: StatusCardProps) {
           </p>
         </div>
       )}
+
+      {/* D-12 — «К задачам» CTA. Fixes the Phase-1 dead-end: a user landing on `/` with a healthy
+          connection had no forward navigation. Shown only when the badge resolves to 'ok'
+          (connected && meetsPatRequirement) — the same condition that makes the badge green. */}
+      {badgeState === 'ok' && (
+        <Link
+          to="/select"
+          aria-label="Перейти к задачам"
+          style={ctaStyle}
+        >
+          К задачам
+          <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+      )}
     </div>
   );
 }
+
+/**
+ * ctaStyle (D-12) — solid-accent button rendered via a <Link>. Mirrors the buildDocBtnStyle /
+ * doneBtnStyle accent treatment (solid --accent bg, #fff text, 600 weight, --radius-md) so the
+ * primary forward action reads the same as the other primary CTAs in the flow. The global
+ * :focus-visible ring (D-11) and the global 150ms transition (D-10) apply automatically.
+ */
+const ctaStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 'var(--space-1)',
+  marginTop: 'var(--space-5)',
+  padding: 'var(--space-2) var(--space-5)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--accent)',
+  background: 'var(--accent)',
+  color: '#fff',
+  fontWeight: 600,
+  fontSize: 'var(--font-md)',
+  textDecoration: 'none',
+  alignSelf: 'center',
+};
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (

@@ -1,9 +1,12 @@
+import { AlertCircle } from 'lucide-react';
 import { useConnectionStatus } from '../hooks/useConnectionStatus.js';
 import { StatusCard } from '../components/StatusCard.js';
+import { StateView } from '../components/StateView.js';
 
 /**
  * Status page (CONTEXT.md D-29, D-34): reads /api/config + /api/connection-status.
- * Loading → Skeleton; Error → message; Success → StatusCard with version + error guidance.
+ * Loading + error states use the shared StateView (D-13); Success → StatusCard with version +
+ * error guidance. The StatusCard itself renders the «К задачам» CTA when connected (D-12).
  */
 export function StatusPage() {
   const { config, connectionStatus, isLoading, error } = useConnectionStatus();
@@ -19,57 +22,17 @@ export function StatusPage() {
       }}
     >
       {isLoading ? (
-        <Skeleton />
+        <StateView variant="loading" heading="Загрузка" />
       ) : error ? (
-        <ErrorBox message={error instanceof Error ? error.message : 'Ошибка подключения'} />
+        <StateView
+          variant="error"
+          icon={<AlertCircle size={48} color="var(--error)" aria-hidden="true" />}
+          heading="Не удалось загрузить статус"
+          description={`${error instanceof Error ? error.message : 'Ошибка подключения'} Проверьте, что приложение запущено и конфигурация задана.`}
+        />
       ) : config ? (
         <StatusCard config={config} connectionStatus={connectionStatus} />
       ) : null}
     </main>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div
-      aria-busy="true"
-      aria-label="Загрузка"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 16,
-        padding: '2rem',
-        maxWidth: 480,
-        width: '100%',
-        opacity: 0.6,
-      }}
-    >
-      <div style={{ height: '1.5rem', background: 'var(--border)', borderRadius: 8, marginBottom: '1.5rem' }} />
-      <div style={{ height: '1rem', background: 'var(--border)', borderRadius: 6, marginBottom: '0.75rem' }} />
-      <div style={{ height: '1rem', background: 'var(--border)', borderRadius: 6, marginBottom: '0.75rem' }} />
-      <div style={{ height: '1rem', background: 'var(--border)', borderRadius: 6 }} />
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div
-      role="alert"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--error)',
-        borderRadius: 16,
-        padding: '2rem',
-        maxWidth: 480,
-        color: 'var(--error)',
-      }}
-    >
-      <h1 style={{ margin: '0 0 1rem', fontSize: '1.25rem' }}>Не удалось загрузить статус</h1>
-      <p style={{ margin: 0 }}>{message}</p>
-      <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-        Проверьте, что приложение запущено и конфигурация задана.
-      </p>
-    </div>
   );
 }
