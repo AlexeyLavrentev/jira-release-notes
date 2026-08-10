@@ -1,4 +1,15 @@
-import { Bug, BookOpen, ListTodo, Target, GitBranch, Square, type LucideIcon } from 'lucide-react';
+import {
+  Bug,
+  BookOpen,
+  ListTodo,
+  Target,
+  GitBranch,
+  Square,
+  Sparkles,
+  ArrowUpCircle,
+  Flag,
+  type LucideIcon,
+} from 'lucide-react';
 
 /**
  * Issuetype → icon + semantic color mapping (Phase 6 CONTEXT D-04, D-05).
@@ -17,12 +28,26 @@ import { Bug, BookOpen, ListTodo, Target, GitBranch, Square, type LucideIcon } f
 export type IssueTypeIconInfo = { Icon: LucideIcon; color: string };
 
 const ISSUETYPE_MAP: Record<string, IssueTypeIconInfo> = {
+  // English (system names; "*" suffix = disabled/customized subtype Jira sometimes returns)
   bug: { Icon: Bug, color: 'var(--error)' },
+  'bug*': { Icon: Bug, color: 'var(--error)' },
   story: { Icon: BookOpen, color: 'var(--accent)' },
   task: { Icon: ListTodo, color: 'var(--success)' },
+  'task*': { Icon: ListTodo, color: 'var(--success)' },
   epic: { Icon: Target, color: 'var(--warning)' },
   'sub-task': { Icon: GitBranch, color: 'var(--text-muted)' },
+  'sub-task*': { Icon: GitBranch, color: 'var(--text-muted)' },
   subtask: { Icon: GitBranch, color: 'var(--text-muted)' },
+  // Russian (localized Jira instances — e.g. "Ошибка" instead of "Bug")
+  ошибка: { Icon: Bug, color: 'var(--error)' },
+  история: { Icon: BookOpen, color: 'var(--accent)' },
+  задача: { Icon: ListTodo, color: 'var(--success)' },
+  подзадача: { Icon: GitBranch, color: 'var(--text-muted)' },
+  // Common additional types
+  'новая функциональность': { Icon: Sparkles, color: 'var(--accent)' },
+  улучшение: { Icon: ArrowUpCircle, color: 'var(--success)' },
+  initiative: { Icon: Flag, color: 'var(--warning)' },
+  инициатива: { Icon: Flag, color: 'var(--warning)' },
 };
 
 const DEFAULT: IssueTypeIconInfo = { Icon: Square, color: 'var(--text-muted)' };

@@ -82,4 +82,49 @@ describe('getIssueTypeIcon', () => {
       expect(result.color).toBe('var(--error)');
     });
   });
+
+  describe('localized (Russian) issuetype names', () => {
+    it('maps Ошибка → Bug icon with var(--error)', () => {
+      const result = getIssueTypeIcon('Ошибка');
+      expect(result.Icon).toBe(Bug);
+      expect(result.color).toBe('var(--error)');
+    });
+
+    it('maps История → BookOpen icon with var(--accent)', () => {
+      const result = getIssueTypeIcon('История');
+      expect(result.Icon).toBe(BookOpen);
+      expect(result.color).toBe('var(--accent)');
+    });
+
+    it('maps Задача → ListTodo icon with var(--success)', () => {
+      const result = getIssueTypeIcon('Задача');
+      expect(result.Icon).toBe(ListTodo);
+      expect(result.color).toBe('var(--success)');
+    });
+
+    it('maps Подзадача → GitBranch icon with var(--text-muted)', () => {
+      const result = getIssueTypeIcon('Подзадача');
+      expect(result.Icon).toBe(GitBranch);
+      expect(result.color).toBe('var(--text-muted)');
+    });
+
+    it('treats Russian names case-insensitively', () => {
+      expect(getIssueTypeIcon('ошибка').Icon).toBe(getIssueTypeIcon('Ошибка').Icon);
+      expect(getIssueTypeIcon('ОШИБКА').Icon).toBe(getIssueTypeIcon('Ошибка').Icon);
+    });
+  });
+
+  describe('Jira "*"-suffixed subtype names', () => {
+    it('maps "Bug*" → Bug icon', () => {
+      expect(getIssueTypeIcon('Bug*').Icon).toBe(Bug);
+    });
+
+    it('maps "Task*" → ListTodo icon', () => {
+      expect(getIssueTypeIcon('Task*').Icon).toBe(ListTodo);
+    });
+
+    it('maps "Sub-task*" → GitBranch icon', () => {
+      expect(getIssueTypeIcon('Sub-task*').Icon).toBe(GitBranch);
+    });
+  });
 });
