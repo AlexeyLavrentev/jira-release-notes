@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
@@ -15,6 +15,7 @@ const CARD_BG: Record<ValidationCategory, string> = {
   empty: 'rgba(255,59,48,0.06)',
   short: 'rgba(255,159,10,0.06)',
   placeholder: 'rgba(255,149,0,0.06)',
+  skip: 'transparent', // D-08 — no highlight, skip is intentional
   valid: 'transparent',
 };
 
@@ -36,6 +37,7 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
     if (category === 'empty') return <AlertCircle size={size} color="var(--error)" />;
     if (category === 'short') return <AlertTriangle size={size} color="var(--warning)" />;
     if (category === 'placeholder') return <AlertTriangle size={size} color="#ff9500" />;
+    if (category === 'skip') return <Ban size={size} color="var(--text-tertiary)" />; // D-09
     return <CheckCircle size={size} color="var(--success)" />;
   }
 

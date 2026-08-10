@@ -4,12 +4,14 @@ import { validateReleaseNote } from '../validation.js';
 import type { DocumentDoc, DocGroup, DocItem, ExportSortKey, GroupingMode } from './types.js';
 
 /**
- * Grouping core (CONTEXT.md D-09, D-14, D-19, D-20, D-31, D-32).
+ * Grouping core (CONTEXT.md D-09, D-14, D-15, D-17, D-19, D-20, D-31, D-32).
  *
  * groupBy produces an insertion-ordered Map<groupKey, Issue[]> honoring the D-09 group order.
- * buildDocumentDoc orchestrates groupBy → per-group sortIssues (reused, not re-derived) → DocItem
- * mapping (edits priority + markers) and omits empty groups (D-14). header.total is the SOURCE
- * issue count so multi-component issues do not inflate the headline number (GROUP-06).
+ * buildDocumentDoc orchestrates skip exclusion (D-15) → groupBy → per-group sortIssues (reused,
+ * not re-derived) → DocItem mapping (edits priority + markers) and omits empty groups (D-14).
+ * header.total is the EXPORTABLE issue count (post-skip-exclusion, D-15) so multi-component
+ * issues do not inflate the headline number (GROUP-06) and intentionally-excluded skip issues
+ * never appear in the document's headline count.
  */
 
 /** D-09 — predefined type-template order; issues whose issuetype is not here get alphabetical groups after the four. */
@@ -39,6 +41,11 @@ export function resolveNoteText(issue: Issue, editedText: string | undefined): s
       return `[ЗАГЛУШКА] ${issue.summary}`;
     case 'short':
       return `[КОРОТКО] ${issue.summary}`;
+    // D-16 — defensive: skip issues are filtered out of the document before this runs
+    // (buildDocumentDoc), so a skip issue never reaches resolveNoteText. If one ever leaked
+    // through, return '' rather than emitting the raw marker into the output.
+    case 'skip':
+      return '';
     default:
       return resolved;
   }
@@ -148,11 +155,16 @@ export function sortGroups(mode: GroupingMode, groupKeys: string[]): string[] {
 }
 
 /**
- * buildDocumentDoc (D-31/D-32) — orchestrate grouping + within-group sort + DocItem mapping.
+ * buildDocumentDoc (D-15/D-31/D-32) — orchestrate skip exclusion + grouping + within-group sort + DocItem mapping.
  *
+ * - D-15/D-17 — skip issues are excluded ENTIRELY (no group, no document, no «Нет release note»)
+ *   BEFORE grouping. The filter uses the edits-priority expression so an engineer who removed the
+ *   marker in EditPage reactivates the issue (validateReleaseNote on the edited text → non-skip).
  * - Groups with zero items are omitted entirely (D-14).
- * - header.total = issues.length (the SOURCE count), NOT the sum of group items — so a single
- *   issue appearing in two component groups does not inflate the headline total (GROUP-06).
+ * - header.total = exportable.length (the EXPORTABLE count after skip exclusion, D-15), NOT the
+ *   sum of group items and NOT the raw source count — so a single issue appearing in two
+ *   component groups does not inflate the headline total (GROUP-06), and dropped skip issues do
+ *   not inflate it either.
  * - Within each group, items are sorted via the existing sortIssues (reused — never re-derive
  *   priority weights here). ExportSortKey is a subset of SortKey, so the cast is sound.
  */
@@ -165,7 +177,13 @@ export function buildDocumentDoc(
   version: string,
   date: string,
 ): DocumentDoc {
-  const grouped = groupBy(mode, issues);
+  // D-15/D-17 — exclude skip issues entirely before grouping. Edit priority: if the engineer
+  // removed the marker in EditPage, validateReleaseNote on the edited text returns non-skip and
+  // the issue stays in the document. This expression matches resolveNoteText's edit resolution.
+  const exportable = issues.filter(
+    (issue) => validateReleaseNote(editedNotes[issue.key] ?? issue.releaseNote) !== 'skip',
+  );
+  const grouped = groupBy(mode, exportable);
   const orderedKeys = [...grouped.keys()]; // already D-09 ordered
 
   // D-08/D-11 — the SEMANTIC direction: `desc` means "important/newest/Z first".
@@ -189,7 +207,7 @@ export function buildDocumentDoc(
   }
 
   return {
-    header: { version, date, total: issues.length },
+    header: { version, date, total: exportable.length },
     groups,
   };
 }

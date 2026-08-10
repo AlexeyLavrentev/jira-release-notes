@@ -1,8 +1,8 @@
 import type { Issue } from '../../../shared/types/issue';
 
-export type ValidationCategory = 'empty' | 'short' | 'placeholder' | 'valid';
+export type ValidationCategory = 'empty' | 'short' | 'placeholder' | 'skip' | 'valid';
 
-export type ValidationFilterMode = 'all' | 'problematic' | 'valid';
+export type ValidationFilterMode = 'all' | 'problematic' | 'valid' | 'skipped';
 
 /** Placeholder patterns (D-31) — case-insensitive, trimmed match. */
 export const PLACEHOLDER_PATTERNS = [
@@ -22,12 +22,21 @@ export const PLACEHOLDER_PATTERNS = [
 /** Short threshold (D-30) — fewer than this many chars is 'short'. */
 export const SHORT_THRESHOLD = 15;
 
-/** Sort priority (D-35) — lower = more problematic, sorts first. */
+/**
+ * D-05 — canonical skip marker, hardcoded (no aliases, no config). Exact match after
+ * trim().toLowerCase() (D-06): the field must be EXACTLY this marker (case-insensitive,
+ * surrounding whitespace tolerated) to be classified 'skip'.
+ */
+export const SKIP_MARKER = '<no-release-notes>';
+
+/** Sort priority (D-35) — lower = more problematic, sorts first. skip sits between placeholder
+ * and valid (D-04): intentional exclusion, not a problem, but shown above valid for visibility. */
 export const categoryPriority: Record<ValidationCategory, number> = {
   empty: 0,
   short: 1,
   placeholder: 2,
-  valid: 3,
+  skip: 3,
+  valid: 4,
 };
 
 /**
@@ -36,6 +45,10 @@ export const categoryPriority: Record<ValidationCategory, number> = {
  */
 export function validateReleaseNote(note: string): ValidationCategory {
   const trimmed = note.trim();
+  // D-02 — skip FIRST. `<no-release-notes>` is technically non-empty but semantically skip, so it
+  // must be classified before the empty/placeholder/short checks. Exact match (D-06): an inline
+  // marker surrounded by real text stays valid — only a field that IS the marker becomes skip.
+  if (trimmed.toLowerCase() === SKIP_MARKER) return 'skip';
   if (trimmed === '') return 'empty';
 
   const lower = trimmed.toLowerCase();
@@ -63,12 +76,13 @@ export interface CategoryCounts {
   empty: number;
   short: number;
   placeholder: number;
+  skip: number;
   valid: number;
 }
 
 /** Count issues by category (D-34). */
 export function countByCategory(categories: Map<string, ValidationCategory>): CategoryCounts {
-  const counts: CategoryCounts = { total: 0, empty: 0, short: 0, placeholder: 0, valid: 0 };
+  const counts: CategoryCounts = { total: 0, empty: 0, short: 0, placeholder: 0, skip: 0, valid: 0 };
   for (const cat of categories.values()) {
     counts.total++;
     counts[cat]++;

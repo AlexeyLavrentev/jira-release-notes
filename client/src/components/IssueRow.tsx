@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, CheckCircle, Pencil } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
@@ -15,6 +15,7 @@ const ROW_BG: Record<ValidationCategory, string> = {
   empty: 'rgba(255,59,48,0.06)',
   short: 'rgba(255,159,10,0.06)',
   placeholder: 'rgba(255,149,0,0.06)',
+  skip: 'transparent', // D-08 — no highlight, skip is intentional (not a problem)
   valid: 'transparent',
 };
 
@@ -30,6 +31,7 @@ const FLAG_LABEL: Record<ValidationCategory, string> = {
   empty: 'Пустое поле release note',
   short: 'Слишком короткий release note',
   placeholder: 'Заглушка в release note',
+  skip: 'Пропущено (маркер <no-release-notes>)',
   valid: 'Валидный release note',
 };
 
@@ -52,6 +54,8 @@ export function IssueRow({ issue, category }: IssueRowProps) {
     if (category === 'empty') return <AlertCircle size={size} color="var(--error)" aria-label={FLAG_LABEL[category]} />;
     if (category === 'short') return <AlertTriangle size={size} color="var(--warning)" aria-label={FLAG_LABEL[category]} />;
     if (category === 'placeholder') return <AlertTriangle size={size} color="#ff9500" aria-label={FLAG_LABEL[category]} />;
+    if (category === 'skip')
+      return <Ban size={size} color="var(--text-tertiary)" aria-label={FLAG_LABEL[category]} />; // D-09
     return <CheckCircle size={size} color="var(--success)" aria-label={FLAG_LABEL[category]} />;
   }
 
