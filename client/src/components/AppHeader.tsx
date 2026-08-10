@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useConnectionStatus } from '../hooks/useConnectionStatus.js';
 import { useEdits } from '../context/EditsContext.js';
+import { ThemeToggle } from './ThemeToggle.js';
 
 /**
  * Sticky application header (D-09): logo/name left + connection status Badge right.
  * Click on status → / (status page).
  * Edits badge «N с правками» + «Очистить все правки» (D-21, D-18) when edits exist.
+ * ThemeToggle (UI-02) mounted as the last child of the right-side action cluster.
  */
 export function AppHeader() {
   const { connectionStatus } = useConnectionStatus();
@@ -22,25 +24,26 @@ export function AppHeader() {
         zIndex: 20,
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
-        padding: '0.75rem 1.5rem',
+        padding: 'var(--space-3) var(--space-5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
       }}
     >
+      {/* 1rem = root default, not a doc-scale size — do not collapse to --font-md (0.9375rem). */}
       <Link to="/" style={{ textDecoration: 'none', color: 'var(--text)', fontWeight: 600, fontSize: '1rem' }}>
         Jira Release Notes
       </Link>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         {hasEdits && (
           <>
             <span
               style={{
                 background: 'var(--accent)',
                 color: '#fff',
-                borderRadius: 12,
-                padding: '2px 8px',
-                fontSize: '0.75rem',
+                borderRadius: 'var(--radius-lg)',
+                padding: '2px var(--space-2)',
+                fontSize: 'var(--font-xs)',
                 fontWeight: 600,
               }}
             >
@@ -54,13 +57,13 @@ export function AppHeader() {
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 4,
-                padding: '0.25rem 0.5rem',
+                gap: 'var(--space-1)',
+                padding: 'var(--space-1) var(--space-2)',
                 border: '1px solid var(--border)',
                 background: 'transparent',
                 color: 'var(--text-muted)',
-                borderRadius: 6,
-                fontSize: '0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--font-xs)',
                 cursor: 'pointer',
               }}
             >
@@ -71,7 +74,7 @@ export function AppHeader() {
         <Link to="/" style={{ textDecoration: 'none' }}>
           <span
             style={{
-              fontSize: '0.8125rem',
+              fontSize: 'var(--font-xs)',
               fontWeight: 500,
               color: connected ? 'var(--success)' : 'var(--error)',
             }}
@@ -79,6 +82,7 @@ export function AppHeader() {
             {connected ? '✓ Подключено' : '✗ Нет связи'}
           </span>
         </Link>
+        <ThemeToggle />
       </div>
     </header>
   );
