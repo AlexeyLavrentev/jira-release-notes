@@ -64,7 +64,13 @@ export function IssueRow({ issue, category }: IssueRowProps) {
       <tr
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
-        style={{ borderBottom: '1px solid var(--border)', background: ROW_BG[category], cursor: 'pointer' }}
+        style={{
+          borderBottom: '1px solid var(--border)',
+          background: ROW_BG[category],
+          cursor: 'pointer',
+          // D-07 — visual demotion for skip (intentional drop). The row stays clickable/expandable.
+          ...(category === 'skip' ? { opacity: 0.5 } : {}),
+        }}
       >
         <td style={cellStyle}>
           <code style={{ fontSize: '0.75rem' }}>{issue.key}</code>
@@ -74,7 +80,9 @@ export function IssueRow({ issue, category }: IssueRowProps) {
             </span>
           )}
         </td>
-        <td style={cellStyle}>{issue.summary}</td>
+        <td style={{ ...cellStyle, ...(category === 'skip' ? { textDecoration: 'line-through' } : {}) }}>
+          {issue.summary}
+        </td>
         {/* D-15 — secondary columns carry `hidden md:table-cell` to match IssueTable's <th>; the
             table↔card switch (md:block / md:hidden) still owns the <sm phone layout. */}
         <td className="hidden md:table-cell" style={cellStyle}>

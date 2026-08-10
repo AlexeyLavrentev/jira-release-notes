@@ -52,9 +52,13 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
   const visibleIssues = useMemo(() => {
     const filtered = issues.filter((issue) => {
       const cat = categories.get(issue.key) ?? 'valid';
-      if (validationFilter === 'problematic') return cat !== 'valid';
+      // D-11 — skip is NOT problematic (intentional exclusion, not a problem). The 'problematic'
+      // branch below excludes skip alongside valid as a regression guard against skip rows leaking
+      // into «Проблемные», which would mislead the author.
+      if (validationFilter === 'problematic') return cat !== 'valid' && cat !== 'skip';
       if (validationFilter === 'valid') return cat === 'valid';
-      return true;
+      if (validationFilter === 'skipped') return cat === 'skip';
+      return true; // 'all'
     });
 
     if (sortKey) {

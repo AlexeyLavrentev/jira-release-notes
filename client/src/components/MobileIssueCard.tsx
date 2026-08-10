@@ -51,6 +51,8 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
         borderBottom: '1px solid var(--border)',
         padding: '0.75rem 1rem',
         cursor: 'pointer',
+        // D-07 mobile parity — visual demotion for skip (intentional drop). Card stays clickable.
+        ...(category === 'skip' ? { opacity: 0.5 } : {}),
       }}
     >
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
@@ -66,7 +68,7 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
             <TypeIcon size={14} color={typeColor} aria-hidden="true" style={{ verticalAlign: 'middle' }} />
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{issue.issuetype.name}</span>
           </div>
-          <div style={{ fontWeight: 500, fontSize: '0.875rem', marginBottom: '0.25rem' }}>{issue.summary}</div>
+          <div style={{ fontWeight: 500, fontSize: '0.875rem', marginBottom: '0.25rem', ...(category === 'skip' ? { textDecoration: 'line-through' } : {}) }}>{issue.summary}</div>
           <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {issue.releaseNote || '(пусто)'}
           </div>

@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
 import { IssueTable } from './IssueTable.js';
+import { SKIP_MARKER } from '../lib/validation.js';
 import type { SearchResponse, Issue } from '../../../shared/types/issue';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -176,5 +177,78 @@ describe('IssueTable — «Собрать документ» entry button (D-02)
     const src = fs.readFileSync(path.resolve(__dirname, 'IssueTable.tsx'), 'utf8');
     const matches = src.match(/navigate\(`\/export\?\$\{searchParams\.toString\(\)\}`\)/g) ?? [];
     expect(matches.length).toBe(1);
+  });
+});
+
+// ─── Plan 02: SKIP-02 skip-filter (D-11, SKIP-02) ─────────────────────────
+
+/** Skip issue: releaseNote is exactly the SKIP_MARKER → classified 'skip' by validateReleaseNote. */
+const skipIssue: Issue = {
+  key: 'PROJ-9',
+  summary: 'Skipped from release notes',
+  releaseNote: SKIP_MARKER,
+  issuetype: { name: 'Task', id: '3' },
+  status: { name: 'Done', id: '100' },
+  priority: { name: 'Low', id: '4' },
+  components: [],
+  fixVersions: [],
+  epic: null,
+  created: '',
+  updated: '',
+  resolutiondate: '2026-08-03',
+};
+
+/** Response with one skip issue alongside the bug+story from the populated fixture. */
+const responseWithSkip: SearchResponse = {
+  issues: [bug, story, skipIssue],
+  total: 3,
+  fetched: 3,
+  truncated: false,
+};
+
+describe('IssueTable — skip filter (D-11, SKIP-02)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('clicking «Только пропущенные» shows ONLY the skip issue (D-12)', () => {
+    renderTable({ data: responseWithSkip, hasSearched: true });
+    // Activate the skip segment.
+    fireEvent.click(screen.getByRole('button', { name: 'Только пропущенные' }));
+    // The skip issue's key is present (rendered in BOTH the desktop table row and the mobile
+    // card — IssueTable renders both and jsdom applies no CSS, so queryAll is needed).
+    expect(screen.getAllByText('PROJ-9').length).toBeGreaterThan(0);
+    // ...but the bug+story keys are filtered out of both the table and the card list.
+    expect(screen.queryByText('PROJ-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('PROJ-2')).not.toBeInTheDocument();
+  });
+
+  it('«Проблемные» does NOT show the skip issue (D-11 regression guard — skip is not a problem)', () => {
+    renderTable({ data: responseWithSkip, hasSearched: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Только проблемные' }));
+    // Bug + story are both valid (they have well-formed release notes), so the problematic
+    // segment shows neither of them nor the skip issue. The skip issue's key must not appear.
+    expect(screen.queryByText('PROJ-9')).not.toBeInTheDocument();
+  });
+
+  it('«Пропущено: 1» counter renders when a skip issue is present (D-10)', () => {
+    renderTable({ data: responseWithSkip, hasSearched: true });
+    expect(screen.getByText('Пропущено:')).toBeInTheDocument();
+    // The count value (1) is rendered inside a <strong>.
+    expect(screen.getByText('1')).toBeInTheDocument();
+  });
+
+  it('«Пропущено» counter does NOT render when there are no skip issues', () => {
+    // populatedResponse (bug + story) has zero skip issues → counter must be absent.
+    renderPopulated();
+    expect(screen.queryByText('Пропущено:')).not.toBeInTheDocument();
+  });
+
+  it('selecting «Только пропущенные» with zero skip tasks shows an empty body (no crash, D-12)', () => {
+    // populatedResponse has no skip issues. Activating the skip segment must not crash and
+    // must hide both bug+story rows.
+    renderPopulated();
+    fireEvent.click(screen.getByRole('button', { name: 'Только пропущенные' }));
+    expect(screen.queryByText('PROJ-1')).not.toBeInTheDocument();
+    expect(screen.queryByText('PROJ-2')).not.toBeInTheDocument();
   });
 });

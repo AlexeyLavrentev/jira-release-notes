@@ -21,7 +21,10 @@ const issue: Issue = {
   resolutiondate: null,
 };
 
-function renderRowWithProviders(seedEdits?: Record<string, string>) {
+function renderRowWithProviders(
+  seedEdits?: Record<string, string>,
+  category: 'valid' | 'skip' = 'valid',
+) {
   if (seedEdits) {
     sessionStorage.setItem('rn-edits-v1', JSON.stringify(seedEdits));
   }
@@ -31,7 +34,7 @@ function renderRowWithProviders(seedEdits?: Record<string, string>) {
       <EditsProvider>
         <MemoryRouter initialEntries={['/select']}>
           <Routes>
-            <Route path="/select" element={<IssueRow issue={issue} category="valid" />} />
+            <Route path="/select" element={<IssueRow issue={issue} category={category} />} />
             <Route path="/edit/:key" element={<div>edit page</div>} />
           </Routes>
         </MemoryRouter>
@@ -63,5 +66,29 @@ describe('IssueRow edit entry point', () => {
   it('shows the «Отредактировано» indicator when the issue is in the edits map (D-20)', () => {
     renderRowWithProviders({ 'PROJ-1': 'edited text' });
     expect(screen.getByLabelText('Отредактировано')).toBeInTheDocument();
+  });
+});
+
+// ─── Plan 02: SKIP-02 skip-row rendering (D-07, D-09, SKIP-02) ────────────
+
+describe('IssueRow skip category (D-07/D-09, SKIP-02)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('renders the Ban flag with the «Пропущено» aria-label for a skip row (D-09)', () => {
+    renderRowWithProviders(undefined, 'skip');
+    // FLAG_LABEL['skip'] = 'Пропущено (маркер <no-release-notes>)'. The Ban icon carries it as
+    // aria-label, so getByLabelText finds the icon.
+    expect(screen.getByLabelText('Пропущено (маркер <no-release-notes>)')).toBeInTheDocument();
+  });
+
+  it('a skip row is still expandable — clicking reveals the detail block (D-07)', () => {
+    renderRowWithProviders(undefined, 'skip');
+    // The row starts collapsed; the detail block (Release Note: header) is absent.
+    expect(screen.queryByText('Release Note:')).not.toBeInTheDocument();
+    // The <tr> toggles expand on click. Click the row's first cell (the key code) to expand.
+    fireEvent.click(screen.getByText('PROJ-1'));
+    // The detail block header now appears — the skip row is expandable like any other (D-07).
+    expect(screen.getByText('Release Note:')).toBeInTheDocument();
   });
 });

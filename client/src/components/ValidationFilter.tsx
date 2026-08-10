@@ -11,6 +11,7 @@ const FILTERS: { value: ValidationFilterMode; label: string }[] = [
   { value: 'all', label: 'Все' },
   { value: 'problematic', label: 'Только проблемные' },
   { value: 'valid', label: 'Только валидные' },
+  { value: 'skipped', label: 'Только пропущенные' }, // D-11/D-12 — skip segment
 ];
 
 /**
@@ -48,6 +49,11 @@ export function ValidationFilter({ counts, activeFilter, onFilterChange }: Valid
         {counts.empty > 0 && <span style={{ color: 'var(--error)' }}>Пустых: <strong>{counts.empty}</strong></span>}
         {counts.short > 0 && <span style={{ color: 'var(--warning)' }}>Коротких: <strong>{counts.short}</strong></span>}
         {counts.placeholder > 0 && <span style={{ color: '#ff9500' }}>Заглушек: <strong>{counts.placeholder}</strong></span>}
+        {counts.skip > 0 && (
+          <span style={{ color: 'var(--text-muted)' }}>
+            Пропущено: <strong>{counts.skip}</strong>
+          </span>
+        )}
       </div>
     </div>
   );
