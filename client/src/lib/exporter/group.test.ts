@@ -9,6 +9,7 @@ import {
   NO_COMPONENT_LABEL,
   NO_EPIC_LABEL,
 } from './group.js';
+import { SKIP_MARKER } from '../validation.js';
 import type { GroupingMode } from './types.js';
 
 /** Minimal Issue builder — fills required fields with sane defaults. */
@@ -199,10 +200,17 @@ describe('resolveNoteText (D-19 edits priority, D-20 markers)', () => {
     const issue = makeIssue({ key: 'P-1', releaseNote: 'Исправлен краш при загрузке данных', summary: 'S' });
     expect(resolveNoteText(issue, undefined)).toBe('Исправлен краш при загрузке данных');
   });
+
+  it('skip resolved note returns empty string (D-16 defensive case)', () => {
+    // Skip issues are filtered out of the document before resolveNoteText runs (buildDocumentDoc),
+    // but if one ever leaked through it must return '' rather than emitting the raw marker.
+    const issue = makeIssue({ key: 'P-1', releaseNote: SKIP_MARKER, summary: 'S' });
+    expect(resolveNoteText(issue, undefined)).toBe('');
+  });
 });
 
 describe('buildDocumentDoc', () => {
-  it('header.total = source issue count, NOT summed group items (GROUP-06 — multi-component does not inflate)', () => {
+  it('header.total = exportable issue count, NOT summed group items (GROUP-06 — multi-component does not inflate; D-15 — skip excluded)', () => {
     const issues = [
       makeIssue({
         key: 'P-1',
@@ -214,7 +222,7 @@ describe('buildDocumentDoc', () => {
       }),
     ];
     const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '');
-    expect(doc.header.total).toBe(1); // source count, not 2
+    expect(doc.header.total).toBe(1); // exportable count, not 2 (one valid issue, no skip)
     // but the issue appears in two groups
     expect(doc.groups.length).toBe(2);
   });
@@ -274,5 +282,36 @@ describe('buildDocumentDoc', () => {
     ];
     const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
     expect(doc.groups[0].items[0].key).toBe('P-1'); // Highest first
+  });
+});
+
+describe('buildDocumentDoc — skip exclusion (D-15/D-17, SKIP-01)', () => {
+  it('a skip issue is absent from ALL groups; the valid issue is present (D-15)', () => {
+    const issues = [
+      makeIssue({ key: 'P-SKIP', releaseNote: SKIP_MARKER, summary: 'Пропущенная задача' }),
+      makeIssue({ key: 'P-VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'S' }),
+    ];
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
+    const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    expect(allKeys).not.toContain('P-SKIP');
+    expect(allKeys).toContain('P-VALID');
+  });
+
+  it('header.total excludes skip (exportable count, NOT source count) — D-15', () => {
+    const issues = [
+      makeIssue({ key: 'P-SKIP', releaseNote: SKIP_MARKER, summary: 'Пропущенная задача' }),
+      makeIssue({ key: 'P-VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'S' }),
+    ];
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
+    expect(doc.header.total).toBe(1); // exportable count — the skip issue does not inflate it
+  });
+
+  it('edit removing the marker reactivates the issue into the document (D-17/D-18)', () => {
+    const skipIssue = makeIssue({ key: 'P-SKIP', releaseNote: SKIP_MARKER, summary: 'S' });
+    const editedNotes = { 'P-SKIP': 'Исправлен краш при загрузке данных' };
+    const doc = buildDocumentDoc('flat', [skipIssue], editedNotes, 'priority', 'desc', '', '');
+    const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    expect(allKeys).toContain('P-SKIP'); // the edited text is valid → not skip → stays in the doc
+    expect(doc.header.total).toBe(1);
   });
 });
