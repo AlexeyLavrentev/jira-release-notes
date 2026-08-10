@@ -7,6 +7,8 @@ import { ExportPage } from './ExportPage.js';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import type { SearchResponse, Issue } from '../../../shared/types/issue';
 import type { SearchBody } from '../../../shared/schemas/search';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * Mock the download module so the export-button tests can assert downloadFile is called with the
@@ -155,8 +157,6 @@ describe('ExportPage', () => {
     // Structural check mirrored from the acceptance grep: ExportPage must use getQueryData.
     // (No network call is made because there is no enabled useSearch body — verified by the
     // populated-cache test above passing without any fetch mock.)
-    const fs = require('fs');
-    const path = require('path');
     const src = fs.readFileSync(path.resolve(__dirname, 'ExportPage.tsx'), 'utf8');
     expect(src).toContain('getQueryData');
     expect(src).not.toMatch(/useSearch\s*\(/); // must NOT call useSearch() with an enabled body
@@ -277,8 +277,6 @@ describe('ExportPage', () => {
       expect(alert.textContent).toContain('Не удалось сформировать файл. Попробуйте ещё раз.');
 
       // Structural assertion (D-38/D-39): ExportPage must not call any edits-clearing API.
-      const fs = require('fs');
-      const path = require('path');
       const src = fs.readFileSync(path.resolve(__dirname, 'ExportPage.tsx'), 'utf8');
       expect(src).not.toMatch(/\bwipeAll\b|\bresetEdit\b/);
     });

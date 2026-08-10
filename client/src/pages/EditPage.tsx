@@ -63,7 +63,6 @@ export function EditPage() {
     setText(key ? (edits[key] ?? issue?.releaseNote ?? '') : '');
     textareaRef.current?.focus();
     // edits + issue intentionally re-derived each key change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   // Esc = back to /select (D-23). window listener catches Esc even while the textarea is focused.
@@ -225,7 +224,7 @@ export function EditPage() {
                 resize: 'vertical',
               }}
             />
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '4px 0 16px' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)', margin: '4px 0 16px' }}>
               {text.length} символов
             </p>
           </div>
@@ -253,7 +252,7 @@ export function EditPage() {
           </div>
         </div>
 
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0 8px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)', margin: '0 0 8px' }}>
           Правки сохраняются автоматически в этой вкладке
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', marginTop: 8 }}>

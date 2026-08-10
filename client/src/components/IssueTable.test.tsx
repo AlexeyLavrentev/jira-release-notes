@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
 import { IssueTable } from './IssueTable.js';
 import type { SearchResponse, Issue } from '../../../shared/types/issue';
+import fs from 'node:fs';
+import path from 'node:path';
 
 /**
  * IssueTable — Phase 5 D-02 entry button tests. The «Собрать документ» button appears in the
@@ -159,8 +161,6 @@ describe('IssueTable — «Собрать документ» entry button (D-02)
     expect(styleAttr).toContain('color: rgb(255, 255, 255)'); // #fff normalized
 
     // Source-level byte-parity with EditPage.doneBtnStyle (UI-SPEC #8 acceptance).
-    const fs = require('fs');
-    const path = require('path');
     const src = fs.readFileSync(path.resolve(__dirname, 'IssueTable.tsx'), 'utf8');
     expect(src).toContain("background: 'var(--accent)'");
     expect(src).toContain("color: '#fff'");
@@ -173,8 +173,6 @@ describe('IssueTable — «Собрать документ» entry button (D-02)
     // Structural assertion mirroring the plan's acceptance grep.
     // The entry button forwards search params so ExportPage can rebuild the cache key:
     //   navigate(`/export?${searchParams.toString()}`)
-    const fs = require('fs');
-    const path = require('path');
     const src = fs.readFileSync(path.resolve(__dirname, 'IssueTable.tsx'), 'utf8');
     const matches = src.match(/navigate\(`\/export\?\$\{searchParams\.toString\(\)\}`\)/g) ?? [];
     expect(matches.length).toBe(1);
