@@ -9,18 +9,19 @@ interface DocHeaderInputsProps {
  * Input styling parity with the SortControl <select> (UI-SPEC #5): border/radius/padding/bg/font.
  */
 const inputStyle: React.CSSProperties = {
-  padding: '0.375rem 0.75rem',
+  /* 0.375rem (6px) vertical — input-vpadding exception, not on the 8pt scale (05-UI-SPEC). */
+  padding: '0.375rem var(--space-3)',
   border: '1px solid var(--border)',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-md)',
   background: 'var(--surface)',
   color: 'var(--text)',
-  fontSize: '0.9375rem',
+  fontSize: 'var(--font-md)',
 };
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  marginBottom: 4,
-  fontSize: '0.8125rem',
+  marginBottom: 'var(--space-1)',
+  fontSize: 'var(--font-xs)',
   color: 'var(--text-muted)',
 };
 
@@ -31,7 +32,7 @@ const labelStyle: React.CSSProperties = {
  */
 export function DocHeaderInputs({ version, date, onVersionChange, onDateChange }: DocHeaderInputsProps) {
   return (
-    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
       <div>
         <label htmlFor="rn-doc-version" style={labelStyle}>
           Версия

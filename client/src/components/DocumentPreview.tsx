@@ -31,8 +31,8 @@ export function DocumentPreview({ doc }: { doc: DocumentDoc }) {
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
-        borderRadius: 8,
-        padding: 24,
+        borderRadius: 'var(--radius-md)',
+        padding: 'var(--space-6)',
         color: 'var(--text)',
       }}
     >

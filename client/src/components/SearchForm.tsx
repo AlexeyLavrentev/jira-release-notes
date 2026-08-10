@@ -67,27 +67,28 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
       style={{
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
-        padding: '1rem 1.5rem',
+        padding: 'var(--space-4) var(--space-5)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.75rem',
+        gap: 'var(--space-3)',
       }}
     >
       {/* Mode Tabs (D-10) */}
-      <div style={{ display: 'flex', gap: '0.25rem' }}>
+      <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
         {MODES.map((m) => (
           <button
             key={m.value}
             type="button"
             onClick={() => setMode(m.value)}
             style={{
-              padding: '0.375rem 1rem',
-              borderRadius: 8,
+              /* 0.375rem (6px) vertical = input-vpadding exception, not on the 8pt scale (05-UI-SPEC). */
+              padding: '0.375rem var(--space-4)',
+              borderRadius: 'var(--radius-md)',
               border: '1px solid var(--border)',
               background: mode === m.value ? 'var(--accent)' : 'var(--surface)',
               color: mode === m.value ? '#fff' : 'var(--text)',
               fontWeight: 500,
-              fontSize: '0.875rem',
+              fontSize: 'var(--font-sm)',
               cursor: 'pointer',
             }}
           >
@@ -97,10 +98,10 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
       </div>
 
       {/* Inputs grid (D-16) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-3)' }}>
         {/* Project Select (D-11) */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Проект</span>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Проект</span>
           <select
             value={project}
             onChange={(e) => setProject(e.target.value)}
@@ -117,8 +118,8 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
 
         {/* Mode-specific inputs */}
         {mode === 'jql' && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', gridColumn: '1 / -1' }}>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>JQL запрос</span>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', gridColumn: '1 / -1' }}>
+            <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>JQL запрос</span>
             <textarea
               value={jql}
               onChange={(e) => setJql(e.target.value)}
@@ -131,8 +132,8 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
 
         {mode === 'fixVersion' && (
           <>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Версия</span>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Версия</span>
               <select
                 value={fixVersion}
                 onChange={(e) => setFixVersion(e.target.value)}
@@ -147,25 +148,26 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
                 ))}
               </select>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', paddingTop: '1.5rem' }}>
+            {/* 0.375rem aligns the checkbox with the input vertical center (6px input-vpadding exception). */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', paddingTop: 'var(--space-5)' }}>
               <input
                 type="checkbox"
                 checked={showUnreleased}
                 onChange={(e) => setShowUnreleased(e.target.checked)}
               />
-              <span style={{ fontSize: '0.8125rem' }}>показать unreleased</span>
+              <span style={{ fontSize: 'var(--font-xs)' }}>показать unreleased</span>
             </label>
           </>
         )}
 
         {mode === 'dateRange' && (
           <>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Дата начала</span>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Дата начала</span>
               <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={inputStyle} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Дата окончания</span>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Дата окончания</span>
               <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={inputStyle} />
             </label>
           </>
@@ -174,7 +176,7 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
 
       {/* Errors + Submit (D-15) */}
       {errors.length > 0 && (
-        <div style={{ color: 'var(--error)', fontSize: '0.8125rem' }}>
+        <div style={{ color: 'var(--error)', fontSize: 'var(--font-xs)' }}>
           {errors.map((e, i) => (
             <div key={i}>• {e}</div>
           ))}
@@ -184,13 +186,13 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
         type="submit"
         disabled={!isValid}
         style={{
-          padding: '0.5rem 1.5rem',
-          borderRadius: 8,
+          padding: 'var(--space-2) var(--space-5)',
+          borderRadius: 'var(--radius-md)',
           border: 'none',
           background: isValid ? 'var(--accent)' : 'var(--border)',
           color: isValid ? '#fff' : 'var(--text-muted)',
           fontWeight: 600,
-          fontSize: '0.875rem',
+          fontSize: 'var(--font-sm)',
           cursor: isValid ? 'pointer' : 'not-allowed',
           alignSelf: 'flex-start',
         }}
@@ -202,10 +204,12 @@ export function SearchForm({ onSubmit, initialValues }: SearchFormProps) {
 }
 
 const inputStyle: React.CSSProperties = {
+  /* 0.375rem 6px vertical / 0.625rem 10px horizontal — input-vpadding exception from 05-UI-SPEC,
+     not on the 8pt scale; kept literal for visual parity with SortControl/DocHeaderInputs. */
   padding: '0.375rem 0.625rem',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-md)',
   border: '1px solid var(--border)',
   background: 'var(--bg)',
   color: 'var(--text)',
-  fontSize: '0.875rem',
+  fontSize: 'var(--font-sm)',
 };

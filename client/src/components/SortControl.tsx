@@ -23,17 +23,18 @@ const toggleBtnStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-md)',
   cursor: 'pointer',
 };
 
 const selectStyle: React.CSSProperties = {
-  padding: '0.375rem 0.75rem',
+  /* 0.375rem (6px) vertical — input-vpadding exception, not on the 8pt scale (05-UI-SPEC). */
+  padding: '0.375rem var(--space-3)',
   border: '1px solid var(--border)',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-md)',
   background: 'var(--surface)',
   color: 'var(--text)',
-  fontSize: '0.9375rem',
+  fontSize: 'var(--font-md)',
 };
 
 /**
@@ -43,7 +44,7 @@ const selectStyle: React.CSSProperties = {
  */
 export function SortControl({ value, dir, onValueChange, onDirChange }: SortControlProps) {
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
       <select
         aria-label="Сортировка внутри групп"
         value={value}

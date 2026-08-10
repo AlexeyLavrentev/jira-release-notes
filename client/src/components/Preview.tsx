@@ -16,7 +16,7 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 export function Preview({ text }: { text: string }) {
   if (text.trim() === '') {
     return (
-      <div style={{ color: 'var(--text-muted)', padding: 24, textAlign: 'center' }}>
+      <div style={{ color: 'var(--text-muted)', padding: 'var(--space-6)', textAlign: 'center' }}>
         Заметка пуста — заполните поле выше
       </div>
     );
@@ -28,7 +28,7 @@ export function Preview({ text }: { text: string }) {
       aria-label="Предпросмотр"
       aria-live="polite"
       className="rn-preview"
-      style={{ padding: 16, color: 'var(--text)', lineHeight: 1.6 }}
+      style={{ padding: 'var(--space-4)', color: 'var(--text)', lineHeight: 1.6 }}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeSanitize, defaultSchema]]}>
         {text}

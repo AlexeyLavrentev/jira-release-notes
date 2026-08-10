@@ -20,12 +20,12 @@ const OPTIONS: { value: GroupingMode; label: string }[] = [
  */
 function segmentedBtnStyle(active: boolean): React.CSSProperties {
   return {
-    padding: '0.25rem 0.75rem',
-    borderRadius: 6,
+    padding: 'var(--space-1) var(--space-3)',
+    borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--border)',
     background: active ? 'var(--accent)' : 'var(--surface)',
     color: active ? '#fff' : 'var(--text)',
-    fontSize: '0.8125rem',
+    fontSize: 'var(--font-xs)',
     cursor: 'pointer',
   };
 }
@@ -61,7 +61,7 @@ export function GroupingControl({ value, onChange }: GroupingControlProps) {
     <div
       role="radiogroup"
       aria-label="Шаблон группировки"
-      style={{ display: 'flex', gap: '0.25rem' }}
+      style={{ display: 'flex', gap: 'var(--space-1)' }}
     >
       {OPTIONS.map((o, i) => (
         <button
