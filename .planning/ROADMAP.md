@@ -10,7 +10,8 @@ ships until a user could observe value from it.
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-7 (shipped 2026-08-10)
-- 🚧 **v1.1 Smart Filtering** — Phases 8-10 (in progress)
+- ✅ **v1.1 Smart Filtering** — Phases 8-10 (shipped 2026-08-11)
+- 📋 **Next milestone** — TBD via `/gsd-new-milestone`
 
 ## Phases
 
@@ -25,91 +26,24 @@ ships until a user could observe value from it.
 - [x] Phase 6: UI Polish — apple-design & Dark Mode (5/5 plans) — completed 2026-08-10
 - [x] Phase 7: Guide, README & Open-Source Prep (3/3 plans) — completed 2026-08-10
 
+Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
+
 </details>
 
-### 🚧 v1.1 Smart Filtering (In Progress)
+<details>
+<summary>✅ v1.1 Smart Filtering (Phases 8-10) — SHIPPED 2026-08-11</summary>
 
-**Milestone Goal:** Из Jira приходит грязь — на выходе чистый готовый release notes документ без ручной вычитки.
+**Goal:** Из Jira приходит грязь — на выходе чистый готовый release notes документ без ручной вычитки.
 
-**Phase Numbering:**
+- [x] Phase 8: Status Filtering (2/2 plans) — completed 2026-08-10
+- [x] Phase 9: Skip Markers (2/2 plans) — completed 2026-08-10
+- [x] Phase 10: Clean Export & Configurable Threshold (2/2 plans) — completed 2026-08-11
 
-- Integer phases (8, 9, 10): Planned milestone work (continues from v1.0)
-- Decimal phases (8.1, 9.1): Urgent insertions (marked with INSERTED)
+Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 
-- [x] **Phase 8: Status Filtering** - Only closed issues by default, with a toggle to include all statuses (completed 2026-08-10)
-- [x] **Phase 9: Skip Markers** - Tasks marked `<no-release-notes>` excluded from the document but visible in selection (completed 2026-08-10)
-- [ ] **Phase 10: Clean Export & Configurable Threshold** - Invalid notes separated into a follow-up list; short threshold configurable
-
-## Phase Details
-
-### Phase 8: Status Filtering
-
-**Goal**: Users get only closed issues by default and can deliberately broaden the search to all statuses
-**Depends on**: Phase 7 (v1.0 complete — SearchForm and JQL builder exist)
-**Requirements**: FILT-01, FILT-02, FILT-03
-**Success Criteria** (what must be TRUE):
-
-  1. By default, every search mode (Fix Version / JQL / dateRange) returns only closed issues (`statusCategory = Done`)
-  2. User can toggle between «Только закрытые» and «Все статусы» in SearchForm, and the results update accordingly
-  3. In JQL mode, user can choose to apply or skip the status filter on their custom query (filter is not forced onto user-supplied JQL unless requested)
-
-Plans:
-
-- [x] 08-01-PLAN.md
-- [x] 08-02-PLAN.md
-
-2/2 plans executed, verified, UAT passed 2026-08-10
-
-1/2 plans executed
-
-- [x] 08-02-PLAN.md — Frontend «Только закрытые» toggle in SearchForm + URL sync in SelectPage/ExportPage (FILT-01 frontend, FILT-02)
-
-**UI hint**: yes
-
-### Phase 9: Skip Markers
-
-**Goal**: Tasks an author explicitly marks as no-release-notes are removed from the document while remaining visible in selection
-**Depends on**: Phase 8
-**Requirements**: SKIP-01, SKIP-02
-**Success Criteria** (what must be TRUE):
-
-  1. A task whose release note contains the `<no-release-notes>` marker (or a recognised alias) is fully excluded from the generated document
-  2. Skip tasks show up in the selection table as grayed-out, disabled rows with a skip icon, so the user can see they were intentionally dropped
-  3. Skip tasks never enter the editor or any export output
-
-Plans:
-
-- [x] 09-01-PLAN.md
-
-2/2 plans executed
-
-1/2 plans executed
-
-- [x] 09-02-PLAN.md — SKIP-02 selection visibility: «Пропущенные» filter segment + counter, grayed/struck-through skip rows (desktop + mobile), read-only EditPage rendering, writing-guide marker docs
-
-**UI hint**: yes
-
-### Phase 10: Clean Export & Configurable Threshold
-
-**Goal**: The exported document contains only valid release notes, with invalid tasks surfaced separately for follow-up, and the "short" threshold tunable per deployment
-**Depends on**: Phase 9
-**Requirements**: EXPORT-01, EXPORT-02, CONF-01
-**Success Criteria** (what must be TRUE):
-
-  1. Empty, placeholder, and short release notes do not appear in the document body (no `[ПУСТО]` / `[ЗАГЛУШКА]` / `[КОРОТКО]` markers leak into output)
-  2. Invalid tasks (empty / placeholder / short) appear in a separate «Нет release note» list with their issue keys, so an author knows exactly what to fill in
-  3. The short-release-note threshold is configurable via `config.json` (`shortThreshold`, default 15) and a changed value takes effect on the next search/validate cycle
-
-**Plans:** 2 plans
-
-Plans:
-- [ ] 10-01-PLAN.md — Tracer: configurable threshold → «Нет release note» section end-to-end (config pipeline + createValidation factory + ValidationContext + buildDocumentDoc partition + markdown renderer + ExportPage wiring)
-- [ ] 10-02-PLAN.md — Expansion: plain/html renderer parity + D-08 call-site migration (IssueTable + EditPage → useValidation) + ValidationContext tests + writing-release-notes docs
+</details>
 
 ## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 8 → 9 → 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -121,5 +55,5 @@ Phases execute in numeric order: 8 → 9 → 10
 | 6. UI Polish — apple-design & Dark Mode | v1.0 | 5/5 | Complete | 2026-08-10 |
 | 7. Guide, README & Open-Source Prep | v1.0 | 3/3 | Complete | 2026-08-10 |
 | 8. Status Filtering | v1.1 | 2/2 | Complete | 2026-08-10 |
-| 9. Skip Markers | v1.1 | 2/2 | Complete    | 2026-08-10 |
-| 10. Clean Export & Configurable Threshold | v1.1 | 0/2 | Not started | - |
+| 9. Skip Markers | v1.1 | 2/2 | Complete | 2026-08-10 |
+| 10. Clean Export & Configurable Threshold | v1.1 | 2/2 | Complete | 2026-08-11 |
