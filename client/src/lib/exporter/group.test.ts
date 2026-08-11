@@ -326,3 +326,93 @@ describe('buildDocumentDoc — skip exclusion (D-15/D-17, SKIP-01)', () => {
     expect(doc.header.total).toBe(1);
   });
 });
+
+describe('buildDocumentDoc — missingNotes partition (D-01/D-05/D-11, EXPORT-02)', () => {
+  // Shared factory bound to threshold=15 — same as the production default.
+  const validateFn = createValidation(15).validateReleaseNote;
+
+  it('(a) empty + short + placeholder + valid → 3 missing (categoryPriority order), 1 valid in a group, header.total=1', () => {
+    const issues = [
+      makeIssue({ key: 'EMPTY', releaseNote: '', summary: 'Пустая заметка' }),
+      makeIssue({ key: 'SHORT', releaseNote: 'ок', summary: 'Короткая заметка' }),
+      makeIssue({ key: 'PLACE', releaseNote: 'TODO', summary: 'Заглушка' }),
+      makeIssue({ key: 'VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'Реальный фикс' }),
+    ];
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', validateFn);
+    // D-11 — missingNotes ordered by categoryPriority: empty(0) → short(1) → placeholder(2).
+    expect(doc.missingNotes).toHaveLength(3);
+    expect(doc.missingNotes.map((m) => m.category)).toEqual(['empty', 'short', 'placeholder']);
+    expect(doc.missingNotes.map((m) => m.key)).toEqual(['EMPTY', 'SHORT', 'PLACE']);
+    // Each missing item carries key + summary + category (D-09).
+    expect(doc.missingNotes[0]).toEqual({ key: 'EMPTY', summary: 'Пустая заметка', category: 'empty' });
+    // Only the valid issue is in a group.
+    expect(doc.groups[0].items.map((i) => i.key)).toEqual(['VALID']);
+    expect(doc.groups[0].items).toHaveLength(1);
+    // D-03 — header.total = valid count only.
+    expect(doc.header.total).toBe(1);
+  });
+
+  it('(b) edits priority (D-06): editing an empty note to valid text moves it from missingNotes into a group', () => {
+    const issues = [
+      makeIssue({ key: 'EMPTY', releaseNote: '', summary: 'Пустая заметка' }),
+      makeIssue({ key: 'VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'Реальный фикс' }),
+    ];
+    // Fill the empty note with valid text via edits.
+    const editedNotes = { EMPTY: 'Исправлен краш при загрузке данных' };
+    const doc = buildDocumentDoc('flat', issues, editedNotes, 'priority', 'desc', '', '', validateFn);
+    // EMPTY is now valid → in a group, absent from missingNotes.
+    const groupKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    expect(groupKeys).toContain('EMPTY');
+    expect(doc.missingNotes.map((m) => m.key)).not.toContain('EMPTY');
+    expect(doc.header.total).toBe(2); // both now valid
+  });
+
+  it('(b-cont) edits priority: editing a valid note to short moves it from a group into missingNotes', () => {
+    const issues = [
+      makeIssue({ key: 'VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'Реальный фикс' }),
+    ];
+    // Shorten the valid note below threshold via edits.
+    const editedNotes = { VALID: 'ок' };
+    const doc = buildDocumentDoc('flat', issues, editedNotes, 'priority', 'desc', '', '', validateFn);
+    // VALID is now short → in missingNotes, absent from groups.
+    expect(doc.groups).toEqual([]);
+    expect(doc.missingNotes).toHaveLength(1);
+    expect(doc.missingNotes[0].key).toBe('VALID');
+    expect(doc.missingNotes[0].category).toBe('short');
+    expect(doc.header.total).toBe(0);
+  });
+
+  it('(c) skip regression: a skip issue is excluded from groups AND missingNotes AND header.total', () => {
+    const issues = [
+      makeIssue({ key: 'SKIP', releaseNote: SKIP_MARKER, summary: 'Пропущено' }),
+      makeIssue({ key: 'EMPTY', releaseNote: '', summary: 'Пустая' }),
+      makeIssue({ key: 'VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'Фикс' }),
+    ];
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', validateFn);
+    const groupKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    const missingKeys = doc.missingNotes.map((m) => m.key);
+    expect(groupKeys).not.toContain('SKIP');
+    expect(missingKeys).not.toContain('SKIP'); // D-15 — skip is NOT a missing category
+    expect(doc.header.total).toBe(1); // VALID only
+    expect(missingKeys).toContain('EMPTY'); // empty still routed to missing
+  });
+
+  it('(d) D-16 edge: all issues invalid → header.total=0, groups=[], missingNotes.length=N', () => {
+    const issues = [
+      makeIssue({ key: 'EMPTY', releaseNote: '', summary: 'Пустая' }),
+      makeIssue({ key: 'SHORT', releaseNote: 'ок', summary: 'Короткая' }),
+    ];
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', validateFn);
+    expect(doc.header.total).toBe(0);
+    expect(doc.groups).toEqual([]); // empty groups omitted (D-14)
+    expect(doc.missingNotes).toHaveLength(2);
+    expect(doc.missingNotes.map((m) => m.category)).toEqual(['empty', 'short']); // categoryPriority order
+  });
+
+  it('(e) D-17 edge: empty issues array → header.total=0, groups=[], missingNotes=[]', () => {
+    const doc = buildDocumentDoc('flat', [], {}, 'priority', 'desc', '', '', validateFn);
+    expect(doc.header.total).toBe(0);
+    expect(doc.groups).toEqual([]);
+    expect(doc.missingNotes).toEqual([]);
+  });
+});
