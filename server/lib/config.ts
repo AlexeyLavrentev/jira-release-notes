@@ -22,6 +22,8 @@ export function loadConfig(): Config {
     logLevel: process.env.LOG_LEVEL ?? fileConfig?.logLevel,
     requestTimeoutMs:
       process.env.REQUEST_TIMEOUT_MS ?? fileConfig?.requestTimeoutMs,
+    // Phase 10 D-07 step 2 — env SHORT_THRESHOLD overrides file (Phase 1 D-13 priority).
+    shortThreshold: process.env.SHORT_THRESHOLD ?? fileConfig?.shortThreshold,
   };
 
   const result = ConfigSchema.safeParse(merged);
@@ -46,6 +48,9 @@ export function toPublicConfig(config: Config): ConfigResponse {
     configured: Boolean(config.jiraBaseUrl && config.jiraPat),
     jiraBaseUrl: config.jiraBaseUrl,
     releaseNoteField: config.releaseNoteField,
+    // Phase 10 D-07 step 3 — shortThreshold is a non-secret threshold number (Phase 1 D-19), safe
+    // to expose alongside jiraBaseUrl/releaseNoteField.
+    shortThreshold: config.shortThreshold,
   };
 }
 
@@ -56,6 +61,7 @@ interface RawConfig {
   port?: number;
   logLevel?: string;
   requestTimeoutMs?: number;
+  shortThreshold?: number;
 }
 
 function readConfigFile(): RawConfig | undefined {

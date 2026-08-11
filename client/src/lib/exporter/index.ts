@@ -37,4 +37,6 @@ export type {
   DocGroup,
   DocHeader,
   DocumentDoc,
+  MissingItem,
+  MissingCategory,
 } from './types.js';

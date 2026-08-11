@@ -9,7 +9,7 @@ import {
   NO_COMPONENT_LABEL,
   NO_EPIC_LABEL,
 } from './group.js';
-import { SKIP_MARKER } from '../validation.js';
+import { SKIP_MARKER, createValidation, DEFAULT_THRESHOLD } from '../validation.js';
 import type { GroupingMode } from './types.js';
 
 /** Minimal Issue builder — fills required fields with sane defaults. */
@@ -156,18 +156,18 @@ describe('sortGroups', () => {
 describe('within-group item sort (D-08, reuses sortIssues)', () => {
   it('default priority DESC orders Highest first within the group', () => {
     const issues = [
-      makeIssue({ key: 'P-LOW', priority: { name: 'Low', id: '4' } }),
-      makeIssue({ key: 'P-HIGH', priority: { name: 'High', id: '1' } }),
-      makeIssue({ key: 'P-MED', priority: { name: 'Medium', id: '2' } }),
+      makeIssue({ key: 'P-LOW', priority: { name: 'Low', id: '4' }, releaseNote: 'valid low note text' }),
+      makeIssue({ key: 'P-HIGH', priority: { name: 'High', id: '1' }, releaseNote: 'valid high note text' }),
+      makeIssue({ key: 'P-MED', priority: { name: 'Medium', id: '2' }, releaseNote: 'valid med note text' }),
     ];
-    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     const flat = doc.groups[0];
     const keys = flat.items.map((i) => i.key);
     expect(keys).toEqual(['P-HIGH', 'P-MED', 'P-LOW']);
   });
 });
 
-describe('resolveNoteText (D-19 edits priority, D-20 markers)', () => {
+describe('resolveNoteText (Phase 10 — pure edit resolution, no markers)', () => {
   it('edited text takes priority over the original releaseNote (D-19)', () => {
     const issue = makeIssue({ key: 'P-1', releaseNote: 'original valid note text here', summary: 'S' });
     const out = resolveNoteText(issue, 'edited valid note text here');
@@ -180,20 +180,22 @@ describe('resolveNoteText (D-19 edits priority, D-20 markers)', () => {
     expect(out).toBe('a perfectly valid note');
   });
 
-  it('empty resolved note → [ПУСТО] {summary} marker (D-20)', () => {
+  it('empty resolved note returns the raw empty releaseNote (Phase 10 — no [ПУСТО] marker)', () => {
+    // Phase 10: invalid notes are routed to doc.missingNotes by buildDocumentDoc; resolveNoteText
+    // no longer prefixes markers. An empty note yields the raw empty string.
     const issue = makeIssue({ key: 'P-1', releaseNote: '', summary: 'Краш при загрузке' });
-    expect(resolveNoteText(issue, undefined)).toBe('[ПУСТО] Краш при загрузке');
-    expect(resolveNoteText(issue, '   ')).toBe('[ПУСТО] Краш при загрузке');
+    expect(resolveNoteText(issue, undefined)).toBe('');
+    expect(resolveNoteText(issue, '   ')).toBe('   ');
   });
 
-  it('placeholder resolved note → [ЗАГЛУШКА] {summary} marker (D-20)', () => {
+  it('placeholder resolved note returns the raw placeholder text (Phase 10 — no [ЗАГЛУШКА] marker)', () => {
     const issue = makeIssue({ key: 'P-1', releaseNote: 'TODO', summary: 'Новая фича' });
-    expect(resolveNoteText(issue, undefined)).toBe('[ЗАГЛУШКА] Новая фича');
+    expect(resolveNoteText(issue, undefined)).toBe('TODO');
   });
 
-  it('short resolved note → [КОРОТКО] {summary} marker (D-20)', () => {
+  it('short resolved note returns the raw short text (Phase 10 — no [КОРОТКО] marker)', () => {
     const issue = makeIssue({ key: 'P-1', releaseNote: 'ок', summary: 'Мелкий фикс' });
-    expect(resolveNoteText(issue, undefined)).toBe('[КОРОТКО] Мелкий фикс');
+    expect(resolveNoteText(issue, undefined)).toBe('ок');
   });
 
   it('valid resolved note passes through unchanged (no marker)', () => {
@@ -201,16 +203,17 @@ describe('resolveNoteText (D-19 edits priority, D-20 markers)', () => {
     expect(resolveNoteText(issue, undefined)).toBe('Исправлен краш при загрузке данных');
   });
 
-  it('skip resolved note returns empty string (D-16 defensive case)', () => {
-    // Skip issues are filtered out of the document before resolveNoteText runs (buildDocumentDoc),
-    // but if one ever leaked through it must return '' rather than emitting the raw marker.
+  it('skip resolved note returns the raw marker string (Phase 10 — no defensive emptying)', () => {
+    // Phase 10: resolveNoteText is pure edit-resolution. Skip issues are filtered out of the
+    // document before this runs (buildDocumentDoc), so a skip issue never reaches it in practice;
+    // but if one did, it now returns the raw marker rather than a defensive ''.
     const issue = makeIssue({ key: 'P-1', releaseNote: SKIP_MARKER, summary: 'S' });
-    expect(resolveNoteText(issue, undefined)).toBe('');
+    expect(resolveNoteText(issue, undefined)).toBe(SKIP_MARKER);
   });
 });
 
 describe('buildDocumentDoc', () => {
-  it('header.total = exportable issue count, NOT summed group items (GROUP-06 — multi-component does not inflate; D-15 — skip excluded)', () => {
+  it('header.total = valid issue count, NOT summed group items (GROUP-06 — multi-component does not inflate; D-15 — skip excluded; Phase 10 D-03 — valid only)', () => {
     const issues = [
       makeIssue({
         key: 'P-1',
@@ -221,20 +224,20 @@ describe('buildDocumentDoc', () => {
         releaseNote: 'Исправлен краш при загрузке данных',
       }),
     ];
-    const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '');
-    expect(doc.header.total).toBe(1); // exportable count, not 2 (one valid issue, no skip)
+    const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
+    expect(doc.header.total).toBe(1); // valid count, not 2 (one valid issue, no skip, no invalid)
     // but the issue appears in two groups
     expect(doc.groups.length).toBe(2);
   });
 
   it('omits groups with zero items (D-14 — no "## Epic (0)")', () => {
-    const issues = [makeIssue({ key: 'P-1', issuetype: { name: 'Bug', id: '1' } })];
-    const doc = buildDocumentDoc('type', issues, {}, 'priority', 'desc', '', '');
+    const issues = [makeIssue({ key: 'P-1', issuetype: { name: 'Bug', id: '1' }, releaseNote: 'valid bug fix note text' })];
+    const doc = buildDocumentDoc('type', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     expect(doc.groups.every((g) => g.count > 0)).toBe(true);
     expect(doc.groups.find((g) => g.title === 'Epic')).toBeUndefined();
   });
 
-  it('every source issue appears at least once across all grouping modes (nothing dropped — GROUP-06)', () => {
+  it('every VALID source issue appears in groups; invalid issues appear in missingNotes (Phase 10 D-05 — nothing dropped)', () => {
     const issues = [
       makeIssue({ key: 'P-1', issuetype: { name: 'Bug', id: '1' }, releaseNote: 'valid bug fix note text' }),
       makeIssue({ key: 'P-2', issuetype: { name: 'Story', id: '2' }, releaseNote: 'valid story note text here' }),
@@ -242,23 +245,30 @@ describe('buildDocumentDoc', () => {
     ];
     const modes: GroupingMode[] = ['flat', 'type', 'component', 'epic'];
     for (const mode of modes) {
-      const doc = buildDocumentDoc(mode, issues, {}, 'priority', 'desc', '', '');
-      const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
-      for (const issue of issues) {
-        expect(allKeys).toContain(issue.key);
-      }
+      const doc = buildDocumentDoc(mode, issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
+      const groupKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+      // P-1 and P-2 (valid) appear in groups; P-3 (empty) appears in missingNotes, NOT in groups.
+      expect(groupKeys).toContain('P-1');
+      expect(groupKeys).toContain('P-2');
+      expect(groupKeys).not.toContain('P-3');
+      const missingKeys = doc.missingNotes.map((m) => m.key);
+      expect(missingKeys).toContain('P-3');
     }
   });
 
-  it('DocItem.text carries the marker when the note is problematic (D-20)', () => {
+  it('Phase 10 — an empty note lands in missingNotes (category "empty"), NOT in a group with a marker', () => {
     const issues = [makeIssue({ key: 'P-1', releaseNote: '', summary: 'Пустая заметка' })];
-    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
-    expect(doc.groups[0].items[0].text).toBe('[ПУСТО] Пустая заметка');
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
+    expect(doc.groups).toEqual([]); // no valid issues → no groups
+    expect(doc.missingNotes).toHaveLength(1);
+    expect(doc.missingNotes[0].key).toBe('P-1');
+    expect(doc.missingNotes[0].category).toBe('empty');
+    expect(doc.missingNotes[0].summary).toBe('Пустая заметка');
   });
 
   it('DocItem.text uses edited note when present (D-19)', () => {
     const issues = [makeIssue({ key: 'P-1', releaseNote: 'original note text', summary: 'S' })];
-    const doc = buildDocumentDoc('flat', issues, { 'P-1': 'edited note text here' }, 'priority', 'desc', '', '');
+    const doc = buildDocumentDoc('flat', issues, { 'P-1': 'edited note text here' }, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     expect(doc.groups[0].items[0].text).toBe('edited note text here');
   });
 
@@ -267,7 +277,7 @@ describe('buildDocumentDoc', () => {
       makeIssue({ key: 'P-1', issuetype: { name: 'Bug', id: '1' }, releaseNote: 'valid bug fix note text' }),
       makeIssue({ key: 'P-2', issuetype: { name: 'Bug', id: '1' }, releaseNote: 'another valid bug note' }),
     ];
-    const doc = buildDocumentDoc('type', issues, {}, 'priority', 'desc', '', '');
+    const doc = buildDocumentDoc('type', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     const bug = doc.groups.find((g) => g.title === 'Bug')!;
     expect(bug.count).toBe(2);
     expect(bug.items.length).toBe(2);
@@ -280,36 +290,37 @@ describe('buildDocumentDoc', () => {
       makeIssue({ key: 'P-1', priority: { name: 'Highest', id: '0' }, releaseNote: 'valid note text here' }),
       makeIssue({ key: 'P-2', priority: { name: 'Low', id: '4' }, releaseNote: 'valid note text here' }),
     ];
-    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     expect(doc.groups[0].items[0].key).toBe('P-1'); // Highest first
   });
 });
 
 describe('buildDocumentDoc — skip exclusion (D-15/D-17, SKIP-01)', () => {
-  it('a skip issue is absent from ALL groups; the valid issue is present (D-15)', () => {
+  it('a skip issue is absent from ALL groups AND missingNotes; the valid issue is present (D-15)', () => {
     const issues = [
       makeIssue({ key: 'P-SKIP', releaseNote: SKIP_MARKER, summary: 'Пропущенная задача' }),
       makeIssue({ key: 'P-VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'S' }),
     ];
-    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
     expect(allKeys).not.toContain('P-SKIP');
     expect(allKeys).toContain('P-VALID');
+    expect(doc.missingNotes.map((m) => m.key)).not.toContain('P-SKIP');
   });
 
-  it('header.total excludes skip (exportable count, NOT source count) — D-15', () => {
+  it('header.total excludes skip (valid count, NOT source count) — D-15', () => {
     const issues = [
       makeIssue({ key: 'P-SKIP', releaseNote: SKIP_MARKER, summary: 'Пропущенная задача' }),
       makeIssue({ key: 'P-VALID', releaseNote: 'Исправлен краш при загрузке данных', summary: 'S' }),
     ];
-    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '');
-    expect(doc.header.total).toBe(1); // exportable count — the skip issue does not inflate it
+    const doc = buildDocumentDoc('flat', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
+    expect(doc.header.total).toBe(1); // valid count — the skip issue does not inflate it
   });
 
   it('edit removing the marker reactivates the issue into the document (D-17/D-18)', () => {
     const skipIssue = makeIssue({ key: 'P-SKIP', releaseNote: SKIP_MARKER, summary: 'S' });
     const editedNotes = { 'P-SKIP': 'Исправлен краш при загрузке данных' };
-    const doc = buildDocumentDoc('flat', [skipIssue], editedNotes, 'priority', 'desc', '', '');
+    const doc = buildDocumentDoc('flat', [skipIssue], editedNotes, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
     expect(allKeys).toContain('P-SKIP'); // the edited text is valid → not skip → stays in the doc
     expect(doc.header.total).toBe(1);

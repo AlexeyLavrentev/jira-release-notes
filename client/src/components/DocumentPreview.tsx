@@ -18,8 +18,9 @@ import type { DocumentDoc } from '../lib/exporter/index.js';
  * adding it would parse embedded HTML and require stricter schema surgery. The plugin composition is
  * byte-identical to Preview.tsx so XSS behavior matches across the single-note and whole-document views.
  *
- * The preview matches the export (WYSIWYG — D-16/D-18): marker tokens [ПУСТО]/[ЗАГЛУШКА]/[КОРОТКО]
- * are plain text here and in the export files, never colored.
+ * The preview matches the export (WYSIWYG — D-16/D-18). Phase 10: invalid notes (empty/short/
+ * placeholder) no longer carry in-body markers; they render in a trailing «Нет release note» section
+ * (buildMarkdown emits it from doc.missingNotes), shown identically here and in the export files.
  */
 export function DocumentPreview({ doc }: { doc: DocumentDoc }) {
   const markdown = useMemo(() => buildMarkdown(doc), [doc]);

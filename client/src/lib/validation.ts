@@ -19,8 +19,12 @@ export const PLACEHOLDER_PATTERNS = [
   'placeholder',
 ];
 
-/** Short threshold (D-30) — fewer than this many chars is 'short'. */
-export const SHORT_THRESHOLD = 15;
+/**
+ * D-14 (Phase 10) — fallback threshold before /api/config resolves, and also the Zod default
+ * (Phase 10 D-13/D-15). Replaces the old module-level threshold constant; same value (15),
+ * new semantics: a FALLBACK for the factory param, not a hardcode used inline.
+ */
+export const DEFAULT_THRESHOLD = 15;
 
 /**
  * D-05 — canonical skip marker, hardcoded (no aliases, no config). Exact match after
@@ -40,35 +44,73 @@ export const categoryPriority: Record<ValidationCategory, number> = {
 };
 
 /**
- * Validate a single release note value (D-30, D-31).
- * Returns the category for coloring + icon.
+ * ValidationApi (Phase 10 D-08) — the shape returned by {@link createValidation}. The three
+ * threshold-dependent functions are bound to the captured threshold; consumers obtain an instance
+ * via `useValidation()` (ValidationContext) or construct one directly in tests.
  */
-export function validateReleaseNote(note: string): ValidationCategory {
-  const trimmed = note.trim();
-  // D-02 — skip FIRST. `<no-release-notes>` is technically non-empty but semantically skip, so it
-  // must be classified before the empty/placeholder/short checks. Exact match (D-06): an inline
-  // marker surrounded by real text stays valid — only a field that IS the marker becomes skip.
-  if (trimmed.toLowerCase() === SKIP_MARKER) return 'skip';
-  if (trimmed === '') return 'empty';
-
-  const lower = trimmed.toLowerCase();
-  if (PLACEHOLDER_PATTERNS.includes(lower)) return 'placeholder';
-
-  // Only digits, dots, dashes → placeholder
-  if (/^[0-9.\-]+$/.test(trimmed)) return 'placeholder';
-
-  if (trimmed.length < SHORT_THRESHOLD) return 'short';
-
-  return 'valid';
+export interface ValidationApi {
+  validateReleaseNote: (note: string) => ValidationCategory;
+  validateIssues: (issues: Issue[]) => Map<string, ValidationCategory>;
+  countByCategory: (categories: Map<string, ValidationCategory>) => CategoryCounts;
 }
 
-/** Validate all issues, return Map keyed by issue.key (D-30). */
-export function validateIssues(issues: Issue[]): Map<string, ValidationCategory> {
-  const map = new Map<string, ValidationCategory>();
-  for (const issue of issues) {
-    map.set(issue.key, validateReleaseNote(issue.releaseNote));
-  }
-  return map;
+/**
+ * createValidation (Phase 10 D-08) — factory that captures `threshold` and returns the three
+ * threshold-dependent validation functions. The function bodies are identical to the pre-Phase-10
+ * module-level functions; only the hardcoded threshold literal becomes
+ * `trimmed.length < threshold` (the captured param). Classification order is unchanged
+ * (skip → empty → placeholder → regex-placeholder → short → valid); Phase 9 D-02 (skip-first) is
+ * load-bearing and must not be reordered.
+ */
+export function createValidation(threshold: number): ValidationApi {
+  const validateReleaseNote = (note: string): ValidationCategory => {
+    const trimmed = note.trim();
+    // D-02 — skip FIRST. `<no-release-notes>` is technically non-empty but semantically skip, so it
+    // must be classified before the empty/placeholder/short checks. Exact match (D-06): an inline
+    // marker surrounded by real text stays valid — only a field that IS the marker becomes skip.
+    if (trimmed.toLowerCase() === SKIP_MARKER) return 'skip';
+    if (trimmed === '') return 'empty';
+
+    const lower = trimmed.toLowerCase();
+    if (PLACEHOLDER_PATTERNS.includes(lower)) return 'placeholder';
+
+    // Only digits, dots, dashes → placeholder
+    if (/^[0-9.\-]+$/.test(trimmed)) return 'placeholder';
+
+    if (trimmed.length < threshold) return 'short';
+
+    return 'valid';
+  };
+
+  /** Validate all issues, return Map keyed by issue.key (D-30). */
+  const validateIssues = (issues: Issue[]): Map<string, ValidationCategory> => {
+    const map = new Map<string, ValidationCategory>();
+    for (const issue of issues) {
+      map.set(issue.key, validateReleaseNote(issue.releaseNote));
+    }
+    return map;
+  };
+
+  /** Count issues by category (D-34). */
+  const countByCategory = (
+    categories: Map<string, ValidationCategory>,
+  ): CategoryCounts => {
+    const counts: CategoryCounts = {
+      total: 0,
+      empty: 0,
+      short: 0,
+      placeholder: 0,
+      skip: 0,
+      valid: 0,
+    };
+    for (const cat of categories.values()) {
+      counts.total++;
+      counts[cat]++;
+    }
+    return counts;
+  };
+
+  return { validateReleaseNote, validateIssues, countByCategory };
 }
 
 export interface CategoryCounts {
@@ -80,12 +122,13 @@ export interface CategoryCounts {
   valid: number;
 }
 
-/** Count issues by category (D-34). */
-export function countByCategory(categories: Map<string, ValidationCategory>): CategoryCounts {
-  const counts: CategoryCounts = { total: 0, empty: 0, short: 0, placeholder: 0, skip: 0, valid: 0 };
-  for (const cat of categories.values()) {
-    counts.total++;
-    counts[cat]++;
-  }
-  return counts;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Backward-compat wrappers (Phase 10 Plan 02 removes these — IssueTable/EditPage
+// migrate to useValidation()). They keep the module-level named imports green until
+// the call-site migration lands. group.ts NO LONGER imports these after Phase 10
+// (it receives validateFn as a buildDocumentDoc parameter).
+// ─────────────────────────────────────────────────────────────────────────────
+const _defaultApi = createValidation(DEFAULT_THRESHOLD);
+export const validateReleaseNote = _defaultApi.validateReleaseNote;
+export const validateIssues = _defaultApi.validateIssues;
+export const countByCategory = _defaultApi.countByCategory;

@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, FileText, FileCode } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
+import { useValidation } from '../context/ValidationContext.js';
 import { DocumentPreview } from '../components/DocumentPreview.js';
 import { StateView } from '../components/StateView.js';
 import { GroupingControl } from '../components/GroupingControl.js';
@@ -74,6 +75,10 @@ export function ExportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { edits } = useEdits();
+  // Phase 10 D-08 — the bound validation factory. v.validateReleaseNote is threaded into
+  // buildDocumentDoc as its trailing validateFn param (group.ts is pure and cannot reach the
+  // context itself).
+  const v = useValidation();
   // D-21 — export-failure error state. Shown in an inline --error box above the preview; cleared
   // on the next export attempt. Export NEVER clears edits (D-38/D-39) — the export path makes no
   // call to any edits-clearing API anywhere in this file (acceptance grep: zero matches).
@@ -105,8 +110,8 @@ export function ExportPage() {
   }
 
   const doc = useMemo(
-    () => buildDocumentDoc(group, issues, edits, sort, dir, version, date),
-    [group, issues, edits, sort, dir, version, date],
+    () => buildDocumentDoc(group, issues, edits, sort, dir, version, date, v.validateReleaseNote),
+    [group, issues, edits, sort, dir, version, date, v],
   );
 
   // D-41 — count of edited issues for the summary line.

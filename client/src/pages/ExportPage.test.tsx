@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
+import { ValidationProvider } from '../context/ValidationContext.js';
 import { ExportPage } from './ExportPage.js';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import type { SearchResponse, Issue } from '../../../shared/types/issue';
@@ -82,32 +83,43 @@ function renderWithProviders(initialPath: string, preseedCache = true) {
   if (preseedCache) {
     queryClient.setQueryData(searchQueryKey(searchBody), searchResponse);
   }
+  // Phase 10 — ValidationProvider reads config via useConnectionStatus → useQuery(['config']).
+  // Seed the config cache so the provider resolves shortThreshold synchronously (D-14) without a
+  // network call to /api/config (which has no server in jsdom).
+  queryClient.setQueryData(['config'], {
+    configured: true,
+    jiraBaseUrl: 'https://jira.example.com',
+    releaseNoteField: 'customfield_10000',
+    shortThreshold: 15,
+  });
   const utils = render(
     <QueryClientProvider client={queryClient}>
-      <EditsProvider>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Routes>
-            <Route
-              path="/export"
-              element={
-                <>
-                  <ExportPage />
-                  <LocationProbe />
-                </>
-              }
-            />
-            <Route
-              path="/select"
-              element={
-                <div>
-                  select page
-                  <LocationProbe />
-                </div>
-              }
-            />
-          </Routes>
-        </MemoryRouter>
-      </EditsProvider>
+      <ValidationProvider>
+        <EditsProvider>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <Routes>
+              <Route
+                path="/export"
+                element={
+                  <>
+                    <ExportPage />
+                    <LocationProbe />
+                  </>
+                }
+              />
+              <Route
+                path="/select"
+                element={
+                  <div>
+                    select page
+                    <LocationProbe />
+                  </div>
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </EditsProvider>
+      </ValidationProvider>
     </QueryClientProvider>,
   );
   return { ...utils, queryClient };

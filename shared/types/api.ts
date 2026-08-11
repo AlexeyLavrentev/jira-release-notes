@@ -9,4 +9,7 @@ export interface ConfigResponse {
   jiraBaseUrl: string;
   /** Custom field ID for the release note (safe to show) */
   releaseNoteField: string;
+  /** Short-release-note threshold in chars (CONF-01). Always a number — Zod's .default(15)
+   *  (Phase 10 D-13/D-15) guarantees the backend never omits it. */
+  shortThreshold: number;
 }

@@ -9,6 +9,7 @@ function makeDoc(overrides: Partial<DocumentDoc> = {}): DocumentDoc {
     groups: overrides.groups ?? [
       { title: 'Bug', count: 1, items: [{ key: 'PROJ-1', text: 'Исправлен краш' }] },
     ],
+    missingNotes: overrides.missingNotes ?? [],
   };
 }
 

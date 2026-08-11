@@ -37,7 +37,7 @@ ships until a user could observe value from it.
 - Decimal phases (8.1, 9.1): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 8: Status Filtering** - Only closed issues by default, with a toggle to include all statuses (completed 2026-08-10)
-- [ ] **Phase 9: Skip Markers** - Tasks marked `<no-release-notes>` excluded from the document but visible in selection
+- [x] **Phase 9: Skip Markers** - Tasks marked `<no-release-notes>` excluded from the document but visible in selection (completed 2026-08-10)
 - [ ] **Phase 10: Clean Export & Configurable Threshold** - Invalid notes separated into a follow-up list; short threshold configurable
 
 ## Phase Details
@@ -79,8 +79,13 @@ Plans:
 
 Plans:
 
-- [ ] 09-01-PLAN.md — SKIP-01 data-flow backbone: 'skip' category + marker detection + export exclusion + type-system collateral (validation.ts, group.ts, IssueRow/MobileIssueCard, new validation.test.ts)
-- [ ] 09-02-PLAN.md — SKIP-02 selection visibility: «Пропущенные» filter segment + counter, grayed/struck-through skip rows (desktop + mobile), read-only EditPage rendering, writing-guide marker docs
+- [x] 09-01-PLAN.md
+
+2/2 plans executed
+
+1/2 plans executed
+
+- [x] 09-02-PLAN.md — SKIP-02 selection visibility: «Пропущенные» filter segment + counter, grayed/struck-through skip rows (desktop + mobile), read-only EditPage rendering, writing-guide marker docs
 
 **UI hint**: yes
 
@@ -95,7 +100,11 @@ Plans:
   2. Invalid tasks (empty / placeholder / short) appear in a separate «Нет release note» list with their issue keys, so an author knows exactly what to fill in
   3. The short-release-note threshold is configurable via `config.json` (`shortThreshold`, default 15) and a changed value takes effect on the next search/validate cycle
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Tracer: configurable threshold → «Нет release note» section end-to-end (config pipeline + createValidation factory + ValidationContext + buildDocumentDoc partition + markdown renderer + ExportPage wiring)
+- [ ] 10-02-PLAN.md — Expansion: plain/html renderer parity + D-08 call-site migration (IssueTable + EditPage → useValidation) + ValidationContext tests + writing-release-notes docs
 
 ## Progress
 
@@ -112,5 +121,5 @@ Phases execute in numeric order: 8 → 9 → 10
 | 6. UI Polish — apple-design & Dark Mode | v1.0 | 5/5 | Complete | 2026-08-10 |
 | 7. Guide, README & Open-Source Prep | v1.0 | 3/3 | Complete | 2026-08-10 |
 | 8. Status Filtering | v1.1 | 2/2 | Complete | 2026-08-10 |
-| 9. Skip Markers | v1.1 | 0/2 | Not started | - |
-| 10. Clean Export & Configurable Threshold | v1.1 | 0/TBD | Not started | - |
+| 9. Skip Markers | v1.1 | 2/2 | Complete    | 2026-08-10 |
+| 10. Clean Export & Configurable Threshold | v1.1 | 0/2 | Not started | - |

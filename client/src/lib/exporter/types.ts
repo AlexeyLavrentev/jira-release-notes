@@ -39,8 +39,26 @@ export interface DocHeader {
   total: number;
 }
 
+/**
+ * Phase 10 D-01/D-09/D-10 — the category of an invalid issue routed to the «Нет release note»
+ * trailing section instead of a body group. Lowercase labels (D-10): '[пусто]' / '[коротко]' /
+ * '[заполнение]' (rendered by format-md.ts MISSING_LABEL, not stored here).
+ */
+export type MissingCategory = 'empty' | 'short' | 'placeholder';
+
+/** One invalid issue routed to the «Нет release note» section instead of a group (D-01/D-05). */
+export interface MissingItem {
+  key: string;
+  summary: string;
+  category: MissingCategory;
+}
+
 /** The full neutral document — the single shape every renderer consumes. */
 export interface DocumentDoc {
   header: DocHeader;
   groups: DocGroup[];
+  /** Phase 10 D-01 — invalid issues (empty/short/placeholder), rendered in a trailing
+   *  «Нет release note (N)» section (D-02) after all groups. Empty array when there are none
+   *  (D-17 — renderers omit the section entirely). */
+  missingNotes: MissingItem[];
 }

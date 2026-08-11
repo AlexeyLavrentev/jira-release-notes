@@ -6,6 +6,7 @@ function makeDoc(overrides: Partial<DocumentDoc> = {}): DocumentDoc {
   return {
     header: { version: '', date: '', total: 1, ...overrides.header },
     groups: overrides.groups ?? [],
+    missingNotes: overrides.missingNotes ?? [],
   };
 }
 

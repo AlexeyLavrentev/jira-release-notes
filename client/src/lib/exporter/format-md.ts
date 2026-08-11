@@ -1,12 +1,24 @@
-import type { DocumentDoc } from './types.js';
+import type { DocumentDoc, MissingCategory } from './types.js';
 
 /**
- * Markdown renderer (CONTEXT.md D-10, D-13, D-17, D-23, D-33).
+ * Markdown renderer (CONTEXT.md D-10, D-13, D-17, D-23, D-33; Phase 10 D-02/D-09/D-10/D-12).
  *
  * Pure: takes a DocumentDoc, returns a markdown string. No escaping of note text (D-33 — release
  * notes are passed "as is", rehype-sanitize handles XSS downstream in DocumentPreview/HTML export).
- * The marker tokens [ПУСТО]/[ЗАГЛУШКА]/[КОРОТКО] are already baked into DocItem.text by group.ts.
+ * Phase 10: invalid notes no longer carry in-body markers — they live in doc.missingNotes and are
+ * rendered as a trailing «Нет release note (N)» section (D-02) using MISSING_LABEL (D-10).
  */
+
+/**
+ * Phase 10 D-10 — lowercase human-readable category labels for the «Нет release note» section.
+ * Exported so format-plain.ts reuses the same map (mirrors the existing pluralizeTask cross-format
+ * reuse). '[заполнение]' for placeholder = an actionable ask, not the old '[ЗАГЛУШКА]' jargon.
+ */
+export const MISSING_LABEL: Record<MissingCategory, string> = {
+  empty: '[пусто]',
+  short: '[коротко]',
+  placeholder: '[заполнение]',
+};
 
 /**
  * Russian pluralization for «задача/задачи/задач» (UI-SPEC Copywriting Contract).
@@ -63,6 +75,16 @@ export function buildMarkdown(doc: DocumentDoc): string {
       groupLines.push(`- ${item.key}: ${item.text}`);
     }
     blocks.push(groupLines.join('\n'));
+  }
+  // Phase 10 D-02/D-09/D-12 — trailing «Нет release note (N)» section, same H2 + bullet-list shape
+  // as a regular group. Omitted entirely when there are no missing items (D-17 empty-document edge)
+  // so a clean document has no empty section heading.
+  if (doc.missingNotes.length > 0) {
+    const lines = [`## Нет release note (${doc.missingNotes.length})`];
+    for (const m of doc.missingNotes) {
+      lines.push(`- ${m.key}: ${m.summary} ${MISSING_LABEL[m.category]}`);
+    }
+    blocks.push(lines.join('\n'));
   }
   return blocks.join('\n\n');
 }

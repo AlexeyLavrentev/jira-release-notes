@@ -20,6 +20,11 @@ export const ConfigSchema = z.object({
   logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   /** Jira API request timeout in ms (D-18 default 30000) */
   requestTimeoutMs: z.coerce.number().int().positive().default(30000),
+  /** Short-release-note threshold in chars (CONF-01, Phase 10 D-13). Default 15. min(1): 0 would
+   *  make any len>=1 note valid. max(500): sane upper bound. Out-of-range → Zod fail → backend
+   *  exit 1 (Phase 1 D-16). z.coerce parses string env values; .default(15) keeps legacy
+   *  config.json backward-compatible (Phase 10 D-15). */
+  shortThreshold: z.coerce.number().int().min(1).max(500).default(15),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
