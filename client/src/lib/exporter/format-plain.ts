@@ -1,5 +1,5 @@
 import type { DocumentDoc } from './types.js';
-import { pluralizeTask } from './format-md.js';
+import { pluralizeTask, MISSING_LABEL } from './format-md.js';
 
 /**
  * Plain-text renderer (CONTEXT.md D-23, EXP-02).
@@ -9,9 +9,11 @@ import { pluralizeTask } from './format-md.js';
  * indented with two spaces instead of a bullet; groups and the header are separated by blank lines.
  *
  * Reuses pluralizeTask so the «Всего: N …» line stays consistent across formats (D-32 — every
- * renderer consumes the same DocumentDoc; the plural word is format-agnostic). Note text is NOT
- * escaped (D-33) and nothing inside item text is stripped — only the structural markers that
- * buildMarkdown ADDS are simply omitted here.
+ * renderer consumes the same DocumentDoc; the plural word is format-agnostic). Phase 10 also reuses
+ * MISSING_LABEL so the «Нет release note» section shows the same lowercase category labels across
+ * markdown/plain/html (D-12 uniform layout) — mirrors the existing pluralizeTask cross-format reuse.
+ * Note text is NOT escaped (D-33) and nothing inside item text is stripped — only the structural
+ * markers that buildMarkdown ADDS are simply omitted here.
  */
 
 /**
@@ -51,6 +53,17 @@ export function buildPlain(doc: DocumentDoc): string {
       groupLines.push(`  ${item.key}: ${item.text}`);
     }
     blocks.push(groupLines.join('\n'));
+  }
+  // Phase 10 D-02/D-09/D-12 — trailing «Нет release note (N)» section mirroring buildMarkdown, but
+  // in plain-text: NO '## ' heading prefix, NO '- ' bullet. Items use the same two-space indent as
+  // regular group items (D-12 uniform layout across md/plain/html). Omitted entirely when there are
+  // no missing items (D-17 empty-document edge) so a clean document has no empty section heading.
+  if (doc.missingNotes.length > 0) {
+    const lines = [`Нет release note (${doc.missingNotes.length})`];
+    for (const m of doc.missingNotes) {
+      lines.push(`  ${m.key}: ${m.summary} ${MISSING_LABEL[m.category]}`);
+    }
+    blocks.push(lines.join('\n'));
   }
   return blocks.join('\n\n');
 }

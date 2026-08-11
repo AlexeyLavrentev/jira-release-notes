@@ -109,3 +109,22 @@ describe('buildHtml — XSS sanitization (T-05-03, rehype-sanitize defaultSchema
     expect(body.querySelectorAll('[onerror]').length).toBe(0);
   });
 });
+
+describe('buildHtml — missing section rides buildMarkdown (D-12, EXPORT-02)', () => {
+  it('renders the «Нет release note» section + missing item key in the sanitized HTML body (no source change to format-html.ts)', async () => {
+    // The architecture promise: buildHtml pipes buildMarkdown through remark→rehype→rehypeSanitize→
+    // rehypeStringify. Since buildMarkdown now emits the missing section, buildHtml renders it with
+    // zero code changes. This test proves the section survives the sanitize pipeline.
+    const doc = makeDoc({
+      header: { version: '', date: '', total: 0 },
+      groups: [],
+      missingNotes: [{ key: 'PROJ-1', summary: 'Краш при загрузке', category: 'short' }],
+    });
+    const html = await buildHtml(doc);
+    const body = parseBody(html).body.textContent ?? '';
+    // The section heading text survives.
+    expect(body).toContain('Нет release note');
+    // The missing item's key survives.
+    expect(body).toContain('PROJ-1');
+  });
+});

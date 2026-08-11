@@ -177,3 +177,34 @@ describe('buildMarkdown — no escaping (D-33)', () => {
     expect(md).toContain('*bold* and [link](http://x)');
   });
 });
+
+describe('buildMarkdown — missing section (D-02/D-09/D-12, EXPORT-02)', () => {
+  it('emits a "## Нет release note (N)" H2 + bulleted items with lowercase labels', () => {
+    const doc = makeDoc({
+      header: { version: '', date: '', total: 0 },
+      groups: [],
+      missingNotes: [
+        { key: 'E-1', summary: 'empty note', category: 'empty' },
+        { key: 'S-1', summary: 'short note', category: 'short' },
+        { key: 'P-1', summary: 'placeholder note', category: 'placeholder' },
+      ],
+    });
+    const md = buildMarkdown(doc);
+    // H2 heading with the count.
+    expect(md).toContain('## Нет release note (3)');
+    // Bulleted items — markdown '- ' prefix, lowercase category labels (D-10).
+    expect(md).toContain('- E-1: empty note [пусто]');
+    expect(md).toContain('- S-1: short note [коротко]');
+    expect(md).toContain('- P-1: placeholder note [заполнение]');
+  });
+
+  it('OMITS the missing section entirely when missingNotes is empty (D-17)', () => {
+    const doc = makeDoc({
+      header: { version: '', date: '', total: 1 },
+      groups: [{ title: 'Bug', count: 1, items: [{ key: 'PROJ-1', text: 'Исправлен краш' }] }],
+      missingNotes: [],
+    });
+    const md = buildMarkdown(doc);
+    expect(md).not.toContain('Нет release note');
+  });
+});
