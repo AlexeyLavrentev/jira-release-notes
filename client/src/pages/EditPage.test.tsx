@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
+import { ValidationProvider } from '../context/ValidationContext.js';
 import { EditPage } from './EditPage.js';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { SKIP_MARKER } from '../lib/validation.js';
@@ -46,14 +47,16 @@ function renderWithProviders(initialPath: string, preseedCache = true) {
   }
   const utils = render(
     <QueryClientProvider client={queryClient}>
-      <EditsProvider>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Routes>
-            <Route path="/edit/:key" element={<EditPage />} />
-            <Route path="/select" element={<div>select page</div>} />
-          </Routes>
-        </MemoryRouter>
-      </EditsProvider>
+      <ValidationProvider>
+        <EditsProvider>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <Routes>
+              <Route path="/edit/:key" element={<EditPage />} />
+              <Route path="/select" element={<div>select page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </EditsProvider>
+      </ValidationProvider>
     </QueryClientProvider>,
   );
   return { ...utils, queryClient };
@@ -150,15 +153,17 @@ function renderMulti(initialPath: string) {
   lastLocation = '';
   return render(
     <QueryClientProvider client={queryClient}>
-      <EditsProvider>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <LocationProbe />
-          <Routes>
-            <Route path="/edit/:key" element={<EditPage />} />
-            <Route path="/select" element={<div>select page</div>} />
-          </Routes>
-        </MemoryRouter>
-      </EditsProvider>
+      <ValidationProvider>
+        <EditsProvider>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <LocationProbe />
+            <Routes>
+              <Route path="/edit/:key" element={<EditPage />} />
+              <Route path="/select" element={<div>select page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </EditsProvider>
+      </ValidationProvider>
     </QueryClientProvider>,
   );
 }
@@ -277,14 +282,16 @@ function renderSkip(edits: Record<string, string> = {}) {
   queryClient.setQueryData(searchQueryKey(searchBody), skipResponse);
   return render(
     <QueryClientProvider client={queryClient}>
-      <EditsProvider>
-        <MemoryRouter initialEntries={[SEARCH_URL]}>
-          <Routes>
-            <Route path="/edit/:key" element={<EditPage />} />
-            <Route path="/select" element={<div>select page</div>} />
-          </Routes>
-        </MemoryRouter>
-      </EditsProvider>
+      <ValidationProvider>
+        <EditsProvider>
+          <MemoryRouter initialEntries={[SEARCH_URL]}>
+            <Routes>
+              <Route path="/edit/:key" element={<EditPage />} />
+              <Route path="/select" element={<div>select page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </EditsProvider>
+      </ValidationProvider>
     </QueryClientProvider>,
   );
 }

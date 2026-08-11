@@ -4,7 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ChevronUp, ChevronDown, Ban } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
-import { validateReleaseNote, SKIP_MARKER } from '../lib/validation.js';
+import { useValidation } from '../context/ValidationContext.js';
+import { SKIP_MARKER } from '../lib/validation.js';
 import { Preview } from '../components/Preview.js';
 import { StateView } from '../components/StateView.js';
 import type { SearchResponse } from '../../../shared/types/issue';
@@ -44,6 +45,8 @@ export function EditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { edits, setEdit, resetEdit } = useEdits();
+  // Phase 10 D-08 — validation from the shared factory via context (configured threshold).
+  const v = useValidation();
 
   const searchBody = rebuildSearchBody(searchParams);
   const data = searchBody ? queryClient.getQueryData<SearchResponse>(searchQueryKey(searchBody)) : undefined;
@@ -72,7 +75,7 @@ export function EditPage() {
   // text, validateReleaseNote returns non-skip → isSkip is false → the normal editable textarea
   // renders (D-18 reactivation). Only a field that IS the marker (or an edit equal to it) is skip.
   const resolvedText = key ? (edits[key] ?? issue?.releaseNote ?? '') : '';
-  const isSkip = validateReleaseNote(resolvedText) === 'skip';
+  const isSkip = v.validateReleaseNote(resolvedText) === 'skip';
 
   // Esc = back to /select (D-23). window listener catches Esc even while the textarea is focused.
   useEffect(() => {

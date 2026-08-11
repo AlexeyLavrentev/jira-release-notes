@@ -121,14 +121,3 @@ export interface CategoryCounts {
   skip: number;
   valid: number;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Backward-compat wrappers (Phase 10 Plan 02 removes these — IssueTable/EditPage
-// migrate to useValidation()). They keep the module-level named imports green until
-// the call-site migration lands. group.ts NO LONGER imports these after Phase 10
-// (it receives validateFn as a buildDocumentDoc parameter).
-// ─────────────────────────────────────────────────────────────────────────────
-const _defaultApi = createValidation(DEFAULT_THRESHOLD);
-export const validateReleaseNote = _defaultApi.validateReleaseNote;
-export const validateIssues = _defaultApi.validateIssues;
-export const countByCategory = _defaultApi.countByCategory;

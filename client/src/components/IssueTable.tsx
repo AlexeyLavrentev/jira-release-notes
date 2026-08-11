@@ -7,11 +7,10 @@ import { MobileIssueCard } from './MobileIssueCard.js';
 import { ValidationFilter } from './ValidationFilter.js';
 import { StateView } from './StateView.js';
 import {
-  validateIssues,
-  countByCategory,
   categoryPriority,
   type ValidationFilterMode,
 } from '../lib/validation.js';
+import { useValidation } from '../context/ValidationContext.js';
 import { sortIssues, type SortKey, type SortDirection } from '../lib/sort.js';
 
 interface IssueTableProps {
@@ -35,9 +34,14 @@ export function IssueTable({ data, isLoading, error, hasSearched, onRetry, table
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // Phase 10 D-08 — validation now comes from the shared factory via context (single source of
+  // truth for the configured threshold). `v` is in the useMemo deps so a threshold change
+  // (config arrives) correctly invalidates the memoized categories/counts.
+  const v = useValidation();
+
   const issues = data?.issues ?? [];
-  const categories = useMemo(() => validateIssues(issues), [issues]);
-  const counts = useMemo(() => countByCategory(categories), [categories]);
+  const categories = useMemo(() => v.validateIssues(issues), [issues, v]);
+  const counts = useMemo(() => v.countByCategory(categories), [categories, v]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
