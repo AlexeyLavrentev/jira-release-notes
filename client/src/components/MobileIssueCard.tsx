@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, Ban, CheckCircle, Pencil } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, ExternalLink, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
@@ -75,6 +75,22 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
           {expanded && (
             <div style={{ marginTop: '0.5rem', fontSize: '0.8125rem', whiteSpace: 'pre-wrap' }}>
               {issue.releaseNote || '(пусто)'}
+              {issue.url && (
+                <div style={{ marginTop: '0.25rem' }}>
+                  {/* stopPropagation — без него клик по ссылке сворачивает карточку (как у edit-кнопки) */}
+                  <a
+                    href={issue.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
+                  >
+                    <ExternalLink size={12} aria-hidden="true" style={{ verticalAlign: 'middle' }} /> Открыть в Jira
+                  </a>
+                </div>
+              )}
+              <div style={{ marginTop: '0.25rem' }}>Автор: {issue.reporter ?? '—'}</div>
+              <div style={{ marginTop: '0.25rem' }}>Исполнитель: {issue.assignee ?? 'не назначен'}</div>
               {issue.epic && <div style={{ marginTop: '0.25rem' }}>Эпик: <code>{issue.epic.key}</code></div>}
               {issue.components.length > 0 && (
                 <div style={{ marginTop: '0.25rem' }}>Компоненты: {issue.components.map((c) => c.name).join(', ')}</div>

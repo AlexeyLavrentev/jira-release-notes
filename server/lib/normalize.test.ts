@@ -5,6 +5,7 @@ import {
   normalizeComponents,
   normalizeFixVersions,
   normalizeIssue,
+  normalizeUserName,
   resolveEpic,
 } from './normalize.js';
 import type { JiraRawIssue } from '../../shared/types/jira.js';
@@ -110,6 +111,8 @@ describe('normalizeIssue', () => {
         priority: { name: 'High', id: '2' },
         components: [{ id: 'c1', name: 'backend' }],
         fixVersions: [{ id: 'v1', name: 'v1.0', released: true }],
+        assignee: { name: 'assignee_login', displayName: 'Исполнитель Юзеров' },
+        reporter: { name: 'reporter_login', displayName: 'Автор Авторов' },
         created: '2026-01-01',
         updated: '2026-02-01',
         resolutiondate: '2026-02-01',
@@ -126,6 +129,8 @@ describe('normalizeIssue', () => {
     expect(issue.components).toEqual([{ id: 'c1', name: 'backend' }]);
     expect(issue.fixVersions).toEqual([{ id: 'v1', name: 'v1.0', released: true }]);
     expect(issue.epic).toBeNull();
+    expect(issue.assignee).toBe('Исполнитель Юзеров');
+    expect(issue.reporter).toBe('Автор Авторов');
     expect(issue.resolutiondate).toBe('2026-02-01');
   });
 
@@ -138,6 +143,22 @@ describe('normalizeIssue', () => {
     expect(issue.fixVersions).toEqual([]);
     expect(issue.epic).toBeNull();
     expect(issue.priority).toBeNull();
+    expect(issue.assignee).toBeNull();
+    expect(issue.reporter).toBeNull();
     expect(issue.resolutiondate).toBeNull();
+  });
+});
+
+describe('normalizeUserName', () => {
+  it('prefers displayName over login name', () => {
+    expect(normalizeUserName({ name: 'login', displayName: 'Full Name' })).toBe('Full Name');
+  });
+  it('falls back to name when displayName is absent', () => {
+    expect(normalizeUserName({ name: 'login' })).toBe('login');
+  });
+  it('returns null for unassigned (null) and empty objects', () => {
+    expect(normalizeUserName(null)).toBeNull();
+    expect(normalizeUserName(undefined)).toBeNull();
+    expect(normalizeUserName({ active: true })).toBeNull();
   });
 });

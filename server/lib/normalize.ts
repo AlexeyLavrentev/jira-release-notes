@@ -76,8 +76,7 @@ export function resolveEpic(
   return null;
 }
 
-/**
- * Map a raw Jira issue to the clean Issue type (CONTEXT.md D-29, D-31, D-32).
+/** Map a raw Jira issue to the clean Issue type (CONTEXT.md D-29, D-31, D-32).
  * Empty defaults applied; releaseNote read by configured field ID (D-25, FIELD-01).
  */
 export function normalizeIssue(
@@ -102,10 +101,19 @@ export function normalizeIssue(
     components: normalizeComponents(f.components),
     fixVersions: normalizeFixVersions(f.fixVersions),
     epic: resolveEpic(raw, epicLinkFieldId),
+    assignee: normalizeUserName(f.assignee),
+    reporter: normalizeUserName(f.reporter),
     created: typeof f.created === 'string' ? f.created : '',
     updated: typeof f.updated === 'string' ? f.updated : '',
     resolutiondate: typeof f.resolutiondate === 'string' ? f.resolutiondate : null,
   };
+}
+
+/** Extract display name from a Jira user field, null when absent/unassigned. */
+export function normalizeUserName(user: unknown): string | null {
+  if (!user || typeof user !== 'object') return null;
+  const u = user as { displayName?: string; name?: string };
+  return u.displayName ?? u.name ?? null;
 }
 
 /** Read rendered HTML for the release note field (D-06 preview, issue/:key only). */

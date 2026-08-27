@@ -16,6 +16,9 @@ import type { SearchResponse, ErrorResponse, ErrorType, IssueWithRendered } from
 export const jiraPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
   const releaseNoteField = app.config.releaseNoteField;
   const epicLinkFieldId = app.epicLinkFieldId ?? null;
+  // /browse/KEY link for the frontend (it does not know jiraBaseUrl)
+  const browseUrl = (key: string) =>
+    `${app.config.jiraBaseUrl.replace(/\/+$/, '')}/browse/${encodeURIComponent(key)}`;
 
   // ---- GET /api/connection-status (Phase 1) ----
   app.get('/api/connection-status', async () => {
@@ -70,6 +73,7 @@ export const jiraPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     try {
       const raw = await app.jiraClient.getIssue(key);
       const issue = normalizeIssue(raw, releaseNoteField, epicLinkFieldId) as IssueWithRendered;
+      issue.url = browseUrl(issue.key);
       issue.renderedReleaseNote = getRenderedReleaseNote(raw.renderedFields, releaseNoteField);
       return issue;
     } catch (err) {
@@ -94,7 +98,11 @@ export const jiraPlugin: FastifyPluginAsync = async (app: FastifyInstance) => {
     const jql = buildJql(parsed.data);
     try {
       const { response, capped } = await app.jiraClient.searchIssues(jql, req.signal);
-      const issues = response.issues.map((raw) => normalizeIssue(raw, releaseNoteField, epicLinkFieldId));
+      const issues = response.issues.map((raw) => {
+        const issue = normalizeIssue(raw, releaseNoteField, epicLinkFieldId);
+        issue.url = browseUrl(issue.key);
+        return issue;
+      });
       const result: SearchResponse = {
         issues,
         total: response.total,

@@ -12,6 +12,11 @@ export interface Issue {
   components: { id: string; name: string }[];
   fixVersions: { id: string; name: string; released: boolean }[];
   epic: { key: string; summary: string | null } | null;
+  /** Jira user display names; null when unassigned (expanded row detail). */
+  assignee?: string | null;
+  reporter?: string | null;
+  /** Absolute /browse/KEY link built server-side from jiraBaseUrl. */
+  url?: string;
   created: string;
   updated: string;
   resolutiondate: string | null;

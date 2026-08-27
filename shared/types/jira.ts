@@ -39,6 +39,8 @@ export interface JiraRawFields {
   created?: string;
   updated?: string;
   resolutiondate?: string | null;
+  assignee?: { name?: string; displayName?: string } | null;
+  reporter?: { name?: string; displayName?: string } | null;
   parent?: { key?: string; fields?: { summary?: string } } | null;
   // Custom fields accessed by dynamic key (customfield_XXXXX) — untyped access via this bag
   [fieldId: string]: unknown;

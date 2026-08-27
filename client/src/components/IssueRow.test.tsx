@@ -16,6 +16,9 @@ const issue: Issue = {
   components: [],
   fixVersions: [],
   epic: null,
+  assignee: null,
+  reporter: 'Иван Петров',
+  url: 'https://jira.example.com/browse/PROJ-1',
   created: '',
   updated: '',
   resolutiondate: null,
@@ -90,5 +93,23 @@ describe('IssueRow skip category (D-07/D-09, SKIP-02)', () => {
     fireEvent.click(screen.getByText('PROJ-1'));
     // The detail block header now appears — the skip row is expandable like any other (D-07).
     expect(screen.getByText('Release Note:')).toBeInTheDocument();
+  });
+});
+
+// ─── Expanded detail: Jira link, reporter, assignee ───────────────────────
+
+describe('IssueRow expanded detail (link + author + assignee)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('expanded row shows the Jira link, reporter and unassigned fallback', () => {
+    renderRowWithProviders();
+    fireEvent.click(screen.getByText('PROJ-1'));
+    const link = screen.getByRole('link', { name: /Открыть в Jira/i });
+    expect(link).toHaveAttribute('href', 'https://jira.example.com/browse/PROJ-1');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(screen.getByText('Автор:')).toBeInTheDocument();
+    expect(screen.getByText('Иван Петров')).toBeInTheDocument();
+    expect(screen.getByText('не назначен')).toBeInTheDocument();
   });
 });

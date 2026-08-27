@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, Ban, CheckCircle, Pencil } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, ExternalLink, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
@@ -135,6 +135,20 @@ export function IssueRow({ issue, category }: IssueRowProps) {
                 <p style={{ marginTop: '0.25rem', whiteSpace: 'pre-wrap' }}>{issue.releaseNote || '(пусто)'}</p>
               </div>
               <div>
+                {issue.url && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <a href={issue.url} target="_blank" rel="noreferrer" style={jiraLinkStyle}>
+                      <ExternalLink size={12} aria-hidden="true" style={{ verticalAlign: 'middle' }} />{' '}
+                      Открыть в Jira
+                    </a>
+                  </div>
+                )}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>Автор:</strong> {issue.reporter ?? '—'}
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>Исполнитель:</strong> {issue.assignee ?? 'не назначен'}
+                </div>
                 {issue.epic && (
                   <div style={{ marginBottom: '0.5rem' }}>
                     <strong>Эпик:</strong> <code>{issue.epic.key}</code>
@@ -178,6 +192,12 @@ const editBtnStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   fontWeight: 500,
   cursor: 'pointer',
+};
+
+const jiraLinkStyle: React.CSSProperties = {
+  color: 'var(--accent)',
+  textDecoration: 'none',
+  fontWeight: 500,
 };
 
 function Badge({ children, color }: { children: React.ReactNode; color: string }) {
