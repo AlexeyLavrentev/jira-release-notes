@@ -108,6 +108,23 @@ describe('groupBy', () => {
     expect(groups.has('Backend')).toBe(false); // the losing component gets no group
   });
 
+  it('component: same-name duplicate components (distinct ids) collapse to ONE group — issue appears exactly once (GROUP-07, D-01, G-12-5)', () => {
+    // G-12-5 contract: duplicate names cannot spawn a second group — the winner is derived once from the LAST array element and pushed via a single get-or-create.
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'X' },
+          { id: 'c2', name: 'X' },
+        ],
+      }),
+    ];
+    const groups = groupBy('component', issues);
+    expect(groups.size).toBe(1);
+    expect([...groups.keys()]).toEqual(['X']);
+    expect(groups.get('X')!.map((i) => i.key)).toEqual(['P-1']); // exactly once — grouping is keyed by NAME, not component identity
+  });
+
   it('component: issue with zero components goes only into "Без компонента"', () => {
     const issues = [makeIssue({ key: 'P-1', components: [] })];
     const groups = groupBy('component', issues);
@@ -301,6 +318,24 @@ describe('buildDocumentDoc', () => {
     expect(doc.groups.length).toBe(1); // single-winner membership (GROUP-07) — one group, not two
     expect(doc.groups[0].title).toBe('Frontend'); // the LAST array element wins (D-01)
     expect(doc.groups[0].items.map((i) => i.key)).toEqual(['P-1']); // the issue appears exactly once
+  });
+
+  it('component doc with same-name duplicate components: single group X, count 1, header.total 1 — count not doubled (GROUP-07, D-01, G-12-5)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'X' },
+          { id: 'c2', name: 'X' },
+        ],
+        releaseNote: 'Исправлен краш при загрузке данных',
+      }),
+    ];
+    const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
+    expect(doc.groups).toHaveLength(1);
+    expect(doc.groups[0].title).toBe('X');
+    expect(doc.groups[0].count).toBe(1);
+    expect(doc.header.total).toBe(1); // count not doubled by the duplicate name
   });
 
   it('component doc invariant: sum of group counts === header.total === valid issue count; every valid key appears exactly once (GROUP-07, D-01/D-03)', () => {
