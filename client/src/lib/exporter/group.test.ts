@@ -91,7 +91,7 @@ describe('groupBy', () => {
     expect(NO_COMPONENT_LABEL).toBe('Без компонента');
   });
 
-  it('component: a single issue with two components appears in BOTH component groups (D-09 multi-count)', () => {
+  it('component: a multi-component issue goes ONLY into the group of the LAST array element; the loser spawns no group (GROUP-07, D-01)', () => {
     const issues = [
       makeIssue({
         key: 'P-1',
@@ -102,14 +102,37 @@ describe('groupBy', () => {
       }),
     ];
     const groups = groupBy('component', issues);
-    expect(groups.get('Backend')!.length).toBe(1);
-    expect(groups.get('Frontend')!.length).toBe(1);
+    expect(groups.size).toBe(1);
+    expect(groups.has('Frontend')).toBe(true); // winner = last element of the Jira array
+    expect(groups.get('Frontend')!.map((i) => i.key)).toEqual(['P-1']); // exactly once
+    expect(groups.has('Backend')).toBe(false); // the losing component gets no group
   });
 
   it('component: issue with zero components goes only into "Без компонента"', () => {
     const issues = [makeIssue({ key: 'P-1', components: [] })];
     const groups = groupBy('component', issues);
     expect([...groups.keys()]).toEqual([NO_COMPONENT_LABEL]);
+  });
+
+  it('component: live K4 order — winner is the LAST element of the Jira components array (GROUP-07, D-01)', () => {
+    // Jira REST returns components name-sorted, so "last in array" = alphabetically last.
+    // The array is never re-sorted — its order IS the contract (D-01).
+    const k4Cases = [
+      { key: 'K4-339', components: ['API', 'External API', 'Gateway'], winner: 'Gateway' },
+      { key: 'K4-380', components: ['PMON', 'UI'], winner: 'UI' },
+      { key: 'K4-205', components: ['UI', 'Журнал алертов'], winner: 'Журнал алертов' }, // Cyrillic winner
+    ];
+    for (const { key, components, winner } of k4Cases) {
+      const issues = [
+        makeIssue({
+          key,
+          components: components.map((name, i) => ({ id: `c${i + 1}`, name })),
+        }),
+      ];
+      const groups = groupBy('component', issues);
+      expect([...groups.keys()]).toEqual([winner]); // the winner is the ONLY group
+      expect(groups.get(winner)!.map((i) => i.key)).toEqual([key]); // issue appears exactly once
+    }
   });
 
   it('epic: one group per epic summary (alphabetical) + "Без эпика" last (D-09)', () => {
@@ -213,7 +236,7 @@ describe('resolveNoteText (Phase 10 — pure edit resolution, no markers)', () =
 });
 
 describe('buildDocumentDoc', () => {
-  it('header.total = valid issue count, NOT summed group items (GROUP-06 — multi-component does not inflate; D-15 — skip excluded; Phase 10 D-03 — valid only)', () => {
+  it('header.total = valid issue count; a multi-component issue lands in exactly ONE group — the winner\'s (GROUP-06/07, D-01; D-15 — skip excluded; Phase 10 D-03 — valid only)', () => {
     const issues = [
       makeIssue({
         key: 'P-1',
@@ -226,8 +249,9 @@ describe('buildDocumentDoc', () => {
     ];
     const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
     expect(doc.header.total).toBe(1); // valid count, not 2 (one valid issue, no skip, no invalid)
-    // but the issue appears in two groups
-    expect(doc.groups.length).toBe(2);
+    expect(doc.groups.length).toBe(1); // single-winner membership (GROUP-07) — one group, not two
+    expect(doc.groups[0].title).toBe('Frontend'); // the LAST array element wins (D-01)
+    expect(doc.groups[0].items.map((i) => i.key)).toEqual(['P-1']); // the issue appears exactly once
   });
 
   it('omits groups with zero items (D-14 — no "## Epic (0)")', () => {
