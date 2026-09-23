@@ -38,4 +38,18 @@ export const staticPlugin: FastifyPluginAsync<StaticPluginOptions> = async (app,
     prefix: '/',
     wildcard: true,
   });
+
+  // SPA fallback (G-11-2): @fastify/static v8 wildcard does not fall back to index.html
+  // on its own — unmatched client-side routes would hit Fastify's default JSON 404.
+  // Registered after fastifyStatic so reply.sendFile is available; real /api routes
+  // match the router before this handler and are unaffected.
+  app.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith('/api/')) {
+      // API 404 must stay JSON with the same error envelope as setErrorHandler in app.ts
+      return reply
+        .code(404)
+        .send({ error: { message: `Route ${request.method}:${request.url} not found`, code: 404 } });
+    }
+    return reply.sendFile('index.html');
+  });
 };
