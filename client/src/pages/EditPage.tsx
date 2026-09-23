@@ -310,7 +310,7 @@ export function EditPage() {
           >
             Сбросить
           </button>
-          <button onClick={() => navigate('/select')} style={doneBtnStyle}>
+          <button onClick={() => navigate(`/select?${searchParams.toString()}`)} style={doneBtnStyle}>
             Готово
           </button>
         </div>
