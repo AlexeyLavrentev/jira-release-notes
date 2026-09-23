@@ -141,9 +141,12 @@ const multiResponse: SearchResponse = { issues: multiIssues, total: 3, fetched: 
 
 /** Probe that exposes the current location pathname so nav assertions work without mocking. */
 let lastLocation = '';
+/** Phase 11 (NAV-01..03) — probe also records loc.search so query-preservation assertions work. */
+let lastSearch = '';
 function LocationProbe() {
   const loc = useLocation();
   lastLocation = loc.pathname;
+  lastSearch = loc.search;
   return null;
 }
 
@@ -151,6 +154,7 @@ function renderMulti(initialPath: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(searchQueryKey(searchBody), multiResponse);
   lastLocation = '';
+  lastSearch = '';
   return render(
     <QueryClientProvider client={queryClient}>
       <ValidationProvider>
@@ -321,6 +325,30 @@ describe('EditPage skip-issue rendering (D-13/D-14/D-18, SKIP-02)', () => {
     expect(screen.getByRole('textbox')).toBeInTheDocument();
     // The read-only marker display block is gone.
     expect(screen.queryByText('<no-release-notes>')).not.toBeInTheDocument();
+  });
+});
+
+// ─── Phase 11: navigation query preservation (NAV-01..03) ────────────────────
+//
+// Every navigation away from the editor/export surfaces MUST carry the search query
+// string, mirroring the IssueRow.tsx:121 / MobileIssueCard.tsx:108 pattern
+// (`?${searchParams.toString()}`). SelectPage restores filters from the URL on mount
+// (D-17) — dropping the query string is the root cause of lost filters.
+//
+// Encoding note: the source URL encodes jql via encodeURIComponent ('project%20%3D%20PROJ'),
+// but URLSearchParams.toString() re-encodes the space as '+'. The expected round-trip form is
+// 'project+%3D+PROJ' — values decode identically ('project = PROJ'), so the SearchBody and
+// the React Query cache key are unchanged (cache-correctness, v1.1 Phase 8).
+
+describe('EditPage navigation query preservation (NAV-01..03)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('clicking «Готово» navigates to /select carrying the search query string (NAV-01)', () => {
+    renderMulti(multiUrl('PROJ-1'));
+    fireEvent.click(screen.getByText('Готово'));
+    expect(lastLocation).toBe('/select');
+    expect(lastSearch).toBe('?project=PROJ&mode=jql&jql=project+%3D+PROJ');
   });
 });
 
