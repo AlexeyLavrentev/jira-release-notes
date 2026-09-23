@@ -350,5 +350,34 @@ describe('EditPage navigation query preservation (NAV-01..03)', () => {
     expect(lastLocation).toBe('/select');
     expect(lastSearch).toBe('?project=PROJ&mode=jql&jql=project+%3D+PROJ');
   });
+
+  it('pressing Escape navigates to /select carrying the search query string (NAV-01)', () => {
+    renderMulti(multiUrl('PROJ-1'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(lastLocation).toBe('/select');
+    expect(lastSearch).toBe('?project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
+
+  it('empty-state «К списку» navigates to /select carrying the search query string (NAV-01)', () => {
+    // PROJ-99 is absent from the seeded multiResponse → data && !issue renders the empty state.
+    renderMulti(multiUrl('PROJ-99'));
+    fireEvent.click(screen.getByText('К списку'));
+    expect(lastLocation).toBe('/select');
+    expect(lastSearch).toBe('?project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
+
+  it('↓ (Следующая) navigates to the next key carrying the search query string (NAV-02)', () => {
+    renderMulti(multiUrl('PROJ-1'));
+    fireEvent.click(screen.getByLabelText('Следующая задача'));
+    expect(lastLocation).toBe('/edit/PROJ-2');
+    expect(lastSearch).toBe('?project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
+
+  it('↑ (Предыдущая) navigates to the previous key carrying the search query string (NAV-02)', () => {
+    renderMulti(multiUrl('PROJ-2'));
+    fireEvent.click(screen.getByLabelText('Предыдущая задача'));
+    expect(lastLocation).toBe('/edit/PROJ-1');
+    expect(lastSearch).toBe('?project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
 });
 
