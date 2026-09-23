@@ -56,8 +56,11 @@ export function resolveNoteText(issue: Issue, editedText: string | undefined): s
  *
  * - 'type': TYPE_GROUP_ORDER first, then any other issuetype alphabetical. No zero groups (only
  *   issuetypes that appear get a key).
- * - 'component': alphabetical component names, then NO_COMPONENT_LABEL last. An issue with N
- *   components contributes to N groups; an issue with zero components goes only into NO_COMPONENT_LABEL.
+ * - 'component': alphabetical component names, then NO_COMPONENT_LABEL last. An issue with 2+
+ *   components goes into exactly ONE group — keyed by the LAST element of its components array
+ *   (GROUP-07, D-01: Jira REST returns components name-sorted, so "last in array" = alphabetically
+ *   last; the array is never re-sorted — its Jira order IS the contract). An issue with zero
+ *   components goes only into NO_COMPONENT_LABEL (D-03).
  * - 'epic': alphabetical epic summaries, then NO_EPIC_LABEL last. issue.epic?.summary ?? NO_EPIC_LABEL.
  * - 'flat': a single group keyed FLAT_LABEL.
  */
@@ -97,11 +100,14 @@ export function groupBy(mode: GroupingMode, issues: Issue[]): Map<string, Issue[
         if (bucket) bucket.push(issue);
         else collected.set(NO_COMPONENT_LABEL, [issue]);
       } else {
-        for (const c of issue.components) {
-          const bucket = collected.get(c.name);
-          if (bucket) bucket.push(issue);
-          else collected.set(c.name, [issue]);
-        }
+        // GROUP-07 (D-01) — single-winner membership: the issue goes into exactly ONE group,
+        // keyed by the LAST element of its components array. Jira REST returns components
+        // name-sorted, so "last in array" = alphabetically last; the array is never re-sorted.
+        // By D-02 the document shows no annotations about losing components.
+        const winner = issue.components[issue.components.length - 1].name;
+        const bucket = collected.get(winner);
+        if (bucket) bucket.push(issue);
+        else collected.set(winner, [issue]);
       }
     }
     // Alphabetical component names, then NO_COMPONENT_LABEL last.
