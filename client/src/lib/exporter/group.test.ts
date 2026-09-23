@@ -135,6 +135,55 @@ describe('groupBy', () => {
     }
   });
 
+  it('component: mixed input — exactly-once, completeness, disjoint groups; losing components spawn no groups (GROUP-07, D-01/D-03)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Backend' },
+          { id: 'c2', name: 'Frontend' },
+        ],
+      }),
+      makeIssue({ key: 'P-2', components: [] }),
+      makeIssue({ key: 'P-3', components: [{ id: 'c3', name: 'Auth' }] }),
+      makeIssue({
+        key: 'P-4',
+        components: [
+          { id: 'c4', name: 'API' },
+          { id: 'c5', name: 'External API' },
+          { id: 'c6', name: 'Gateway' },
+        ],
+      }),
+    ];
+    const groups = groupBy('component', issues);
+    // Total preserved — every issue lands in exactly one group (no duplicates, no losses).
+    const total = [...groups.values()].reduce((sum, arr) => sum + arr.length, 0);
+    expect(total).toBe(4);
+    const allKeys = [...groups.values()].flat().map((i) => i.key);
+    expect(allKeys).toHaveLength(4);
+    expect(new Set(allKeys).size).toBe(4);
+    // The losing component 'Backend' spawns no group even though a real issue carries it.
+    expect(groups.has('Backend')).toBe(false);
+    // The zero-component issue goes only into NO_COMPONENT_LABEL (D-03).
+    expect(groups.get(NO_COMPONENT_LABEL)!.map((i) => i.key)).toEqual(['P-2']);
+  });
+
+  it('component: a losing component does not capture an issue — but still wins its own single-component issue (GROUP-07, D-01)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Backend' },
+          { id: 'c2', name: 'Frontend' },
+        ],
+      }),
+      makeIssue({ key: 'P-2', components: [{ id: 'c3', name: 'Backend' }] }),
+    ];
+    const groups = groupBy('component', issues);
+    expect(groups.get('Frontend')!.map((i) => i.key)).toEqual(['P-1']); // P-1 won by Frontend
+    expect(groups.get('Backend')!.map((i) => i.key)).toEqual(['P-2']); // P-2 keeps Backend
+  });
+
   it('epic: one group per epic summary (alphabetical) + "Без эпика" last (D-09)', () => {
     const issues = [
       makeIssue({ key: 'P-1', epic: { key: 'E-1', summary: 'Migration' } }),
@@ -252,6 +301,29 @@ describe('buildDocumentDoc', () => {
     expect(doc.groups.length).toBe(1); // single-winner membership (GROUP-07) — one group, not two
     expect(doc.groups[0].title).toBe('Frontend'); // the LAST array element wins (D-01)
     expect(doc.groups[0].items.map((i) => i.key)).toEqual(['P-1']); // the issue appears exactly once
+  });
+
+  it('component doc invariant: sum of group counts === header.total === valid issue count; every valid key appears exactly once (GROUP-07, D-01/D-03)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Backend' },
+          { id: 'c2', name: 'Frontend' },
+        ],
+        releaseNote: 'Исправлен краш при загрузке данных',
+      }),
+      makeIssue({ key: 'P-2', components: [], releaseNote: 'Добавлена проверка прав доступа' }),
+      makeIssue({ key: 'P-3', components: [{ id: 'c3', name: 'Auth' }], releaseNote: 'Ускорен вход в систему на десять секунд' }),
+    ];
+    const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '', createValidation(DEFAULT_THRESHOLD).validateReleaseNote);
+    expect(doc.header.total).toBe(3); // valid count
+    const sum = doc.groups.reduce((acc, g) => acc + g.count, 0);
+    expect(sum).toBe(doc.header.total); // arithmetic exactly-once: no duplicates, no losses
+    const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    expect(allKeys).toHaveLength(3);
+    expect(new Set(allKeys).size).toBe(3); // disjoint groups — each valid key exactly once
+    expect(allKeys.sort()).toEqual(['P-1', 'P-2', 'P-3']);
   });
 
   it('omits groups with zero items (D-14 — no "## Epic (0)")', () => {
