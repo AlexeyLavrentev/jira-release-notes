@@ -296,3 +296,31 @@ describe('ExportPage', () => {
     });
   });
 });
+
+// ─── Phase 11: navigation query preservation (NAV-03) ────────────────────────
+//
+// Both back buttons must carry the search query string (IssueRow.tsx:121 pattern) so SelectPage
+// restores the same filtered results (mount-only restore, D-17). Note the LocationProbe renders
+// pathname + '?' + search — the assertions use toContain on the params substring, which is
+// unaffected by that concatenation. Encoding: URLSearchParams.toString() re-encodes the jql
+// space as '+' (source URL used %20) — values decode identically, cache key unchanged.
+
+describe('ExportPage navigation query preservation (NAV-03)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('clicking «Назад» navigates to /select carrying the search query string (populated state)', () => {
+    renderWithProviders(SEARCH_URL);
+    fireEvent.click(screen.getByRole('button', { name: 'Вернуться к списку задач' }));
+    expect(screen.getByTestId('loc').textContent).toContain('/select');
+    expect(screen.getByTestId('loc').textContent).toContain('project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
+
+  it('clicking «К поиску» navigates to /select carrying the search query string (empty state with params)', () => {
+    // Empty cache → the empty-state branch renders (same branch the existing no-params test uses).
+    renderWithProviders(SEARCH_URL, false);
+    fireEvent.click(screen.getByRole('button', { name: 'К поиску' }));
+    expect(screen.getByTestId('loc').textContent).toContain('/select');
+    expect(screen.getByTestId('loc').textContent).toContain('project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
+});
