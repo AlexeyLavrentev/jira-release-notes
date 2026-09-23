@@ -152,7 +152,7 @@ export function ExportPage() {
           heading="Сначала найдите задачи"
           description="Откройте поиск, выберите задачи — затем соберите документ."
           cta={
-            <button onClick={() => navigate('/select')} style={ghostBtnStyle}>
+            <button onClick={() => navigate(`/select?${searchParams.toString()}`)} style={ghostBtnStyle}>
               К поиску
             </button>
           }
@@ -218,7 +218,7 @@ export function ExportPage() {
             {/* Row 1 — header: «Назад» (D-26) + «Сборка документа» (15px/600). */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
-                onClick={() => navigate('/select')}
+                onClick={() => navigate(`/select?${searchParams.toString()}`)}
                 aria-label="Вернуться к списку задач"
                 style={backBtnStyle}
               >
