@@ -78,13 +78,15 @@ export function EditPage() {
   const isSkip = v.validateReleaseNote(resolvedText) === 'skip';
 
   // Esc = back to /select (D-23). window listener catches Esc even while the textarea is focused.
+  // NAV-01 — carries the search query string; searchParams is in deps so the handler never
+  // closes over stale params.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') navigate('/select');
+      if (e.key === 'Escape') navigate(`/select?${searchParams.toString()}`);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     // D-13 — a skip issue cannot be edited. Defense-in-depth: the textarea is not even rendered
@@ -121,7 +123,7 @@ export function EditPage() {
           variant="empty"
           heading="Откройте задачу из списка поиска"
           cta={
-            <button onClick={() => navigate('/select')} style={doneBtnStyle}>
+            <button onClick={() => navigate(`/select?${searchParams.toString()}`)} style={doneBtnStyle}>
               К списку
             </button>
           }
@@ -151,7 +153,7 @@ export function EditPage() {
           {/* ↑↓ navigation (D-04). disabled at list ends. */}
           <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
             <button
-              onClick={() => prevKey && navigate(`/edit/${prevKey}`)}
+              onClick={() => prevKey && navigate(`/edit/${prevKey}?${searchParams.toString()}`)}
               disabled={!prevKey}
               aria-label="Предыдущая задача"
               style={navBtnStyle(!prevKey)}
@@ -159,7 +161,7 @@ export function EditPage() {
               <ChevronUp size={18} />
             </button>
             <button
-              onClick={() => nextKey && navigate(`/edit/${nextKey}`)}
+              onClick={() => nextKey && navigate(`/edit/${nextKey}?${searchParams.toString()}`)}
               disabled={!nextKey}
               aria-label="Следующая задача"
               style={navBtnStyle(!nextKey)}
