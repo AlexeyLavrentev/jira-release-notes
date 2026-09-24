@@ -25,6 +25,12 @@ import type {
  * Phase 10: this module is PURE (non-React) and unit-tested directly. It cannot call
  * useValidation(). The validation function reaches buildDocumentDoc via the trailing `validateFn`
  * parameter, threaded in by ExportPage (PATTERNS Open Q1, resolved Option A).
+ *
+ * Phase 14 (OVRD-02): manual group overrides reach the SAME way — ExportPage threads
+ * useOverrides().overrides in as the trailing `overrides` parameter (validateFn precedent).
+ * The map only ever names an existing component of an issue (membership-checked in groupBy's
+ * component branch); it never creates groups, never rescues invalid notes, and never touches
+ * type/epic/flat modes.
  */
 
 /** D-09 — predefined type-template order; issues whose issuetype is not here get alphabetical groups after the four. */
@@ -63,8 +69,19 @@ export function resolveNoteText(issue: Issue, editedText: string | undefined): s
  *   components goes only into NO_COMPONENT_LABEL (D-03).
  * - 'epic': alphabetical epic summaries, then NO_EPIC_LABEL last. issue.epic?.summary ?? NO_EPIC_LABEL.
  * - 'flat': a single group keyed FLAT_LABEL.
+ *
+ * @param overrides Phase 14 (OVRD-02) — Record<issueKey, componentName> manual group choices.
+ *   Read ONLY by the 'component' branch: the stored name wins over last-wins when it matches one
+ *   of the issue's CURRENT component names; anything else (absent key, unrelated key, stale name)
+ *   silently falls back to last-wins. type/epic/flat branches ignore the parameter entirely.
+ *   Structurally compatible with the OverridesMap alias from useSessionOverrides (the pure module
+ *   imports nothing from the React side).
  */
-export function groupBy(mode: GroupingMode, issues: Issue[]): Map<string, Issue[]> {
+export function groupBy(
+  mode: GroupingMode,
+  issues: Issue[],
+  overrides: Record<string, string> = {},
+): Map<string, Issue[]> {
   if (mode === 'flat') {
     const map = new Map<string, Issue[]>();
     map.set(FLAT_LABEL, [...issues]);
@@ -104,7 +121,19 @@ export function groupBy(mode: GroupingMode, issues: Issue[]): Map<string, Issue[
         // keyed by the LAST element of its components array. Jira REST returns components
         // name-sorted, so "last in array" = alphabetically last; the array is never re-sorted.
         // By D-02 the document shows no annotations about losing components.
-        const winner = issue.components[issue.components.length - 1].name;
+        //
+        // Phase 14 (OVRD-02) — precedence: overrides[issue.key] wins over last-wins ONLY when
+        // the stored name matches one of the issue's CURRENT components (membership check,
+        // T-14-04: session strings can never mint a phantom group heading). A stale entry —
+        // the component was removed from the issue in Jira — silently falls back to last-wins:
+        // the issue is never lost, never duplicated, and the document stays byte-identical to
+        // the no-override build for the same winner.
+        const overridden = overrides[issue.key];
+        const components = issue.components;
+        const winner =
+          overridden !== undefined && components.some((c) => c.name === overridden)
+            ? overridden
+            : components[components.length - 1].name;
         const bucket = collected.get(winner);
         if (bucket) bucket.push(issue);
         else collected.set(winner, [issue]);
@@ -181,6 +210,11 @@ export function sortGroups(mode: GroupingMode, groupKeys: string[]): string[] {
  *
  * @param validateFn Phase 10 D-08 — the `validateReleaseNote` function from a `createValidation`
  *   factory, threaded in by ExportPage via useValidation(). Pure module cannot reach React context.
+ * @param overrides Phase 14 (OVRD-02) — the manual group-override map from
+ *   `useOverrides().overrides`, threaded in by ExportPage as the trailing param (the validateFn
+ *   precedent). Forwarded to groupBy; honored only by component grouping with the membership
+ *   check + silent last-wins fallback described there. Optional with default {} so every
+ *   pre-existing call site compiles and stays green.
  */
 export function buildDocumentDoc(
   mode: GroupingMode,
@@ -191,6 +225,7 @@ export function buildDocumentDoc(
   version: string,
   date: string,
   validateFn: (note: string) => ValidationCategory,
+  overrides: Record<string, string> = {},
 ): DocumentDoc {
   // D-15/D-17 — exclude skip issues entirely before partitioning. Edit priority: if the engineer
   // removed the marker in EditPage, validateFn on the edited text returns non-skip and the issue
@@ -225,7 +260,7 @@ export function buildDocumentDoc(
   // Array.sort is stable, so items in the same category preserve source encounter order.
   missingItems.sort((a, b) => categoryPriority[a.category] - categoryPriority[b.category]);
 
-  const grouped = groupBy(mode, validIssues);
+  const grouped = groupBy(mode, validIssues, overrides);
   const orderedKeys = [...grouped.keys()]; // already D-09 ordered
 
   // D-08/D-11 — the SEMANTIC direction: `desc` means "important/newest/Z first".
