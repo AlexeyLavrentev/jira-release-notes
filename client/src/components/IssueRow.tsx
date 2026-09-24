@@ -5,6 +5,7 @@ import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
 import { useEdits } from '../context/EditsContext.js';
+import { useOverrides } from '../context/OverridesContext.js';
 
 interface IssueRowProps {
   issue: Issue;
@@ -43,6 +44,7 @@ export function IssueRow({ issue, category }: IssueRowProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { edits } = useEdits();
+  const { overrides, setOverride, resetOverride } = useOverrides();
   // D-17: edits map is NEVER cleared on search/project change — isEdited is recomputed per row
   // from the shared context map.
   const isEdited = Object.prototype.hasOwnProperty.call(edits, issue.key);
@@ -177,6 +179,40 @@ export function IssueRow({ issue, category }: IssueRowProps) {
                     <strong>Компоненты:</strong> {issue.components.map((c) => c.name).join(', ')}
                   </div>
                 )}
+                {/* OVRD-01 (locked UI decision): the group selector lives ONLY here — the expanded
+                    IssueRow row — and only on 2+-component issues. No stopPropagation needed: the
+                    expanded <tr> has no onClick (only the main row toggles expand). */}
+                {issue.components.length >= 2 && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    <strong>Группа:</strong>{' '}
+                    <select
+                      aria-label={`Группа для ${issue.key}`}
+                      value={
+                        // FA-14-01: derived display — show the stored override ONLY while it names
+                        // one of the issue's CURRENT components; a stale key (Jira composition
+                        // changed) displays «По умолчанию» and is intentionally left untouched in
+                        // storage (the export side falls back to last-wins per plan 14-02).
+                        overrides[issue.key] !== undefined &&
+                        issue.components.some((c) => c.name === overrides[issue.key])
+                          ? overrides[issue.key]
+                          : ''
+                      }
+                      onChange={(e) =>
+                        e.target.value === ''
+                          ? resetOverride(issue.key)
+                          : setOverride(issue.key, e.target.value)
+                      }
+                      style={groupSelectStyle}
+                    >
+                      <option value="">По умолчанию</option>
+                      {issue.components.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {issue.fixVersions.length > 0 && (
                   <div>
                     <strong>Fix Versions:</strong> {issue.fixVersions.map((v) => v.name).join(', ')}
@@ -209,6 +245,17 @@ const editBtnStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   fontWeight: 500,
   cursor: 'pointer',
+};
+
+// OVRD-01: native select in the expanded-row control tone (mirrors editBtnStyle tokens).
+const groupSelectStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  fontSize: '0.8125rem',
+  padding: '0.25rem 0.5rem',
+  marginLeft: 4,
 };
 
 const jiraLinkStyle: React.CSSProperties = {
