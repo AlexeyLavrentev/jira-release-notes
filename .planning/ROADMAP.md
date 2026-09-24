@@ -12,6 +12,7 @@ ships until a user could observe value from it.
 - ✅ **v1.0 MVP** — Phases 1-7 (shipped 2026-08-10)
 - ✅ **v1.1 Smart Filtering** — Phases 8-10 (shipped 2026-08-11)
 - ✅ **v1.2 UX Fixes** — Phases 11-12 (shipped 2026-09-24)
+- ✅ **v1.3 Component Overrides** — Phases 13-14 (shipped 2026-09-24)
 - 📋 **Next milestone** — TBD via `/gsd-new-milestone`
 
 ## Phases
@@ -56,7 +57,23 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 </details>
 
+<details>
+<summary>✅ v1.3 Component Overrides (Phases 13-14) — SHIPPED 2026-09-24</summary>
+
+**Goal:** Мультикомпонентные задачи видны в таблице с первого взгляда; пользователь может вручную назначить, в какую группу компонентной группировки попадёт такая задача.
+
+- [x] **Phase 13: Multi-Component Highlight** - Маркер в колонке «Компоненты» (desktop-таблица и мобильная карточка) на задачах с 2+ компонентами — видно с первого взгляда, независимо от override (completed 2026-09-24)
+- [x] **Phase 14: Component Group Override** - Селектор группы в раскрытой строке задачи (компоненты + «По умолчанию» = last-wins), sessionStorage-персистенция, действует во всех форматах экспорта; инварианты v1.2 (exactly-once) сохраняются (completed 2026-09-24)
+
+
+Full details: [milestones/v1.3-ROADMAP.md](milestones/v1.3-ROADMAP.md)
+
+</details>
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 13 → 14 (Phase 14 полагается на маркер Phase 13 как на аффорданс и на критерий «маркер остаётся при override»)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -72,3 +89,8 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 10. Clean Export & Configurable Threshold | v1.1 | 2/2 | Complete | 2026-08-11 |
 | 11. Navigation Filter Preservation | v1.2 | 2/2 | Complete | 2026-09-23 |
 | 12. Single-Component Grouping | v1.2 | 2/2 | Complete | 2026-09-23 |
+| 13. Multi-Component Highlight | v1.3 | 1/1 | Complete    | 2026-09-24 |
+| 14. Component Group Override | v1.3 | 2/2 | Complete    | 2026-09-24 |
+
+---
+*Roadmap v1.3 created: 2026-09-24 (2 phases, 3/3 v1.3 requirements mapped)*

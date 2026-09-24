@@ -16,21 +16,21 @@ text / HTML. Рассчитано на внутреннее командное �
 
 ## Current State
 
-**Shipped v1.2 UX Fixes** (2026-09-24): 12 фаз суммарно, 35 планов, ~10 000 LOC TypeScript/React.
-Стек: Fastify + React + Vite + Tailwind + Docker. Полный select → validate → edit → export loop
-с фильтрацией грязи, URL-persistent фильтрами и SPA deep-links. Готово к open-source публикации.
+**Shipped v1.3 Component Overrides** (2026-09-24): 14 фаз суммарно, 38 планов, ~11 000 LOC TypeScript/React.
+Стек: Fastify + React + Vite + Tailwind + Docker. Полный select → validate → edit → export loop с
+фильтрацией грязи, URL-persistent фильтрами, SPA deep-links, marker'ом мультикомпонентных задач и
+ручным override их группы. Готово к open-source публикации.
 
-**v1.2 delivered (2026-09-24):** обе UX-боли закрыты — фильтры и результаты поиска переживают
-любой возврат на главную (редактор, цепочка prev/next, экспорт) + прямые ссылки/F5 работают
-(SPA fallback); задача с несколькими компонентами идёт в документ ровно один раз (последний
-по алфавиту компонент массива Jira).
+**v1.3 delivered (2026-09-24):** мультикомпонентные задачи видны с первого взгляда (Layers-маркер,
+desktop + mobile) и управляемы — селектор группы в раскрытой строке живёт в сессии и действует
+во всех форматах экспорта; инварианты exactly-once сохраняются при любых override.
 
 ## Next Milestone Goals
 
-TBD via `/gsd-new-milestone`. Кандидаты: JQL double-ORDER BY fix (server/lib/jira-client.ts —
-юсерский ORDER BY + closedOnly → 400 от Jira, найдено в v1.2 UAT), Future Requirements
-(CONN-04 Jira Cloud, EXP-05 шаблоны, EXP-06 CSV), косметика code review (rebuildSearchBody
-дублирование, мёртвый sortGroups).
+TBD via `/gsd-new-milestone`. Кандидаты: WR-01 backlog todo (кнопка «Сбросить группы» — поднимется
+из todo-скана), JQL double-ORDER BY fix (server/lib/jira-client.ts), Future Requirements
+(CONN-04 Jira Cloud, EXP-05 шаблоны, EXP-06 CSV), code-review косметика (rebuildSearchBody
+дублирование, мёртвый sortGroups, IN-01 дедуп опций селектора).
 
 ## Requirements
 
@@ -54,10 +54,12 @@ TBD via `/gsd-new-milestone`. Кандидаты: JQL double-ORDER BY fix (serve
 - ✓ Конфигурируемый порог короткой заметки через config.json (`shortThreshold`, default 15) — v1.1 (CONF-01)
 - ✓ Фильтры и результаты поиска переживают все переходы (редактор «Готово»/Escape/prev/next, экспорт back-кнопки) + SPA deep-link fallback — v1.2 (NAV-01/02/03)
 - ✓ Задача с 2+ компонентами при группировке идёт ровно в одну группу — последнего (алфавитно) компонента — v1.2 (GROUP-07)
+- ✓ Мультикомпонентные задачи подсвечены Layers-маркером в таблице (desktop + mobile) — v1.3 (HILITE-01)
+- ✓ Ручное назначение группы мультикомпонентной задаче: селектор в раскрытой строке, sessionStorage rn-overrides-v1, действует во всех форматах экспорта — v1.3 (OVRD-01/02)
 
 ### Active
 
-(None — all v1.2 requirements shipped. Milestone close: /gsd-complete-milestone.)
+(None — all v1.3 requirements shipped. Milestone close: /gsd-complete-milestone.)
 
 ### Out of Scope
 
@@ -102,6 +104,7 @@ TBD via `/gsd-new-milestone`. Кандидаты: JQL double-ORDER BY fix (serve
 |----------|-----------|---------|
 | SPA fallback: setNotFoundHandler → index.html, `/api/*` → JSON 404 | Deep-links (F5/шеринг URL) — часть ценности URL-as-source-of-truth; API-ошибки остаются машиночитаемыми | ✓ Good — v1.2 Phase 11 G-11-2 |
 | Single-component grouping: победитель = последний элемент массива Jira | Массив от Jira приходит name-sorted → «последний» = алфавитно последний, детерминированно и без пересортировки; таблица отбора остаётся зеркалом Jira | ✓ Good — v1.2 Phase 12, D-01..D-05 |
+| Overrides: sessionStorage rn-overrides-v1 по зеркалу EditsContext; overrides параметром в чистый group.ts | Переиспользование проверенного паттерна вместо нового state-механизма; pure-module трейдинг по прецеденту validateFn — рендереры не тронуты | ✓ Good — v1.3 Phase 14 |
 | Только Jira Server/DC в v1 | Целевой контур — self-hosted; Cloud добавляет отдельный API/авторизацию | ✓ Good — v1.0 shipped, Cloud в v2 backlog |
 | Авторизация только через PAT | Современный, безопасный, простой способ (Jira 8.14+) | ✓ Good — работает, PAT в бэкенде, браузер не видит |
 | Сессионное приложение без БД | «Без заморочек» — минимум инфраструктуры для внутреннего инструмента | ✓ Good — sessionStorage + URL state, без состояния |
@@ -134,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-24 after v1.2 milestone (UX Fixes)*
+*Last updated: 2026-09-24 after v1.3 milestone (Component Overrides)*
