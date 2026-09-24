@@ -11,6 +11,7 @@ ships until a user could observe value from it.
 
 - ✅ **v1.0 MVP** — Phases 1-7 (shipped 2026-08-10)
 - ✅ **v1.1 Smart Filtering** — Phases 8-10 (shipped 2026-08-11)
+- ✅ **v1.2 UX Fixes** — Phases 11-12 (shipped 2026-09-24)
 - 📋 **Next milestone** — TBD via `/gsd-new-milestone`
 
 ## Phases
@@ -43,6 +44,18 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 
 </details>
 
+<details>
+<summary>✅ v1.2 UX Fixes (Phases 11-12) — SHIPPED 2026-09-24</summary>
+
+**Goal:** Возврат из редактора/экспорта на главную сохраняет настроенные фильтры и результаты; группировка по компонентам кладёт каждую задачу ровно в одну группу.
+
+- [x] Phase 11: Navigation Filter Preservation (2/2 plans: 11-01 навигация + 11-02 SPA-fallback G-11-2) — completed 2026-09-23
+- [x] Phase 12: Single-Component Grouping (2/2 plans: 12-01 last-wins + 12-02 same-name fixture G-12-5) — completed 2026-09-23
+
+Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -57,3 +70,5 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 | 8. Status Filtering | v1.1 | 2/2 | Complete | 2026-08-10 |
 | 9. Skip Markers | v1.1 | 2/2 | Complete | 2026-08-10 |
 | 10. Clean Export & Configurable Threshold | v1.1 | 2/2 | Complete | 2026-08-11 |
+| 11. Navigation Filter Preservation | v1.2 | 2/2 | Complete | 2026-09-23 |
+| 12. Single-Component Grouping | v1.2 | 2/2 | Complete | 2026-09-23 |

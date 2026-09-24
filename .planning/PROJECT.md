@@ -16,19 +16,21 @@ text / HTML. Рассчитано на внутреннее командное �
 
 ## Current State
 
-**Shipped v1.1 Smart Filtering** (2026-08-11): 10 фаз суммарно, 31 план, ~9 800 LOC TypeScript/React.
-Стек: Fastify + React + Vite + Tailwind + Docker. Полный select → validate → edit → export loop работает,
-с фильтрацией грязи (status / skip / invalid) и настраиваемым short-threshold.
-Готов к open-source публикации (LICENSE MIT, README, guides, example config).
+**Shipped v1.2 UX Fixes** (2026-09-24): 12 фаз суммарно, 35 планов, ~10 000 LOC TypeScript/React.
+Стек: Fastify + React + Vite + Tailwind + Docker. Полный select → validate → edit → export loop
+с фильтрацией грязи, URL-persistent фильтрами и SPA deep-links. Готово к open-source публикации.
 
-**v1.1 delivered (2026-08-11):** из Jira приходит грязь — на выходе чистый готовый release notes документ
-без ручной вычитки. Закрытые задачи по умолчанию, skip-маркеры исключаются, невалидные заметки в отдельной
-секции «Нет release note», порог короткой заметки через config.json.
+**v1.2 delivered (2026-09-24):** обе UX-боли закрыты — фильтры и результаты поиска переживают
+любой возврат на главную (редактор, цепочка prev/next, экспорт) + прямые ссылки/F5 работают
+(SPA fallback); задача с несколькими компонентами идёт в документ ровно один раз (последний
+по алфавиту компонент массива Jira).
 
 ## Next Milestone Goals
 
-TBD via `/gsd-new-milestone`. Кандидаты из Future Requirements (см. ниже): Jira Cloud (CONN-04),
-configurable export templates (EXP-05), CSV export (EXP-06).
+TBD via `/gsd-new-milestone`. Кандидаты: JQL double-ORDER BY fix (server/lib/jira-client.ts —
+юсерский ORDER BY + closedOnly → 400 от Jira, найдено в v1.2 UAT), Future Requirements
+(CONN-04 Jira Cloud, EXP-05 шаблоны, EXP-06 CSV), косметика code review (rebuildSearchBody
+дублирование, мёртвый sortGroups).
 
 ## Requirements
 
@@ -50,10 +52,12 @@ configurable export templates (EXP-05), CSV export (EXP-06).
 - ✓ Skip-маркер `<no-release-notes>` полностью исключает задачу из документа, видна серой disabled-строкой — v1.1 (SKIP-01/02)
 - ✓ Чистый экспорт: empty/placeholder/short в секции «Нет release note», без маркеров в теле — v1.1 (EXPORT-01/02)
 - ✓ Конфигурируемый порог короткой заметки через config.json (`shortThreshold`, default 15) — v1.1 (CONF-01)
+- ✓ Фильтры и результаты поиска переживают все переходы (редактор «Готово»/Escape/prev/next, экспорт back-кнопки) + SPA deep-link fallback — v1.2 (NAV-01/02/03)
+- ✓ Задача с 2+ компонентами при группировке идёт ровно в одну группу — последнего (алфавитно) компонента — v1.2 (GROUP-07)
 
 ### Active
 
-(None — all v1.1 requirements shipped. Next milestone TBD via `/gsd-new-milestone`.)
+(None — all v1.2 requirements shipped. Milestone close: /gsd-complete-milestone.)
 
 ### Out of Scope
 
@@ -96,6 +100,8 @@ configurable export templates (EXP-05), CSV export (EXP-06).
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
+| SPA fallback: setNotFoundHandler → index.html, `/api/*` → JSON 404 | Deep-links (F5/шеринг URL) — часть ценности URL-as-source-of-truth; API-ошибки остаются машиночитаемыми | ✓ Good — v1.2 Phase 11 G-11-2 |
+| Single-component grouping: победитель = последний элемент массива Jira | Массив от Jira приходит name-sorted → «последний» = алфавитно последний, детерминированно и без пересортировки; таблица отбора остаётся зеркалом Jira | ✓ Good — v1.2 Phase 12, D-01..D-05 |
 | Только Jira Server/DC в v1 | Целевой контур — self-hosted; Cloud добавляет отдельный API/авторизацию | ✓ Good — v1.0 shipped, Cloud в v2 backlog |
 | Авторизация только через PAT | Современный, безопасный, простой способ (Jira 8.14+) | ✓ Good — работает, PAT в бэкенде, браузер не видит |
 | Сессионное приложение без БД | «Без заморочек» — минимум инфраструктуры для внутреннего инструмента | ✓ Good — sessionStorage + URL state, без состояния |
@@ -128,4 +134,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-11 after v1.1 milestone (Smart Filtering)*
+*Last updated: 2026-09-24 after v1.2 milestone (UX Fixes)*
