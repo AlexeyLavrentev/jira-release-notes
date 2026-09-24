@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, Ban, CheckCircle, ExternalLink, Pencil } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, ExternalLink, Layers, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
@@ -93,7 +93,22 @@ export function MobileIssueCard({ issue, category }: MobileIssueCardProps) {
               <div style={{ marginTop: '0.25rem' }}>Исполнитель: {issue.assignee ?? 'не назначен'}</div>
               {issue.epic && <div style={{ marginTop: '0.25rem' }}>Эпик: <code>{issue.epic.key}</code></div>}
               {issue.components.length > 0 && (
-                <div style={{ marginTop: '0.25rem' }}>Компоненты: {issue.components.map((c) => c.name).join(', ')}</div>
+                <div style={{ marginTop: '0.25rem' }}>
+                  {/* HILITE-01 (D-03/D-04): view-only Layers marker on 2+-component issues, mobile
+                      counterpart of the IssueRow cell marker. Expanded-only placement is the locked
+                      D-03 decision (FA-13-01). Informational var(--warning); plain span, no
+                      interaction; the title describes the last-wins winner from group.ts. */}
+                  {issue.components.length >= 2 && (
+                    <span
+                      title="Несколько компонентов — при группировке попадёт в одну группу (последний компонент)"
+                      aria-label="Несколько компонентов — при группировке попадёт в одну группу (последний компонент)"
+                      style={{ marginRight: 4, verticalAlign: 'middle', color: 'var(--warning)' }}
+                    >
+                      <Layers size={12} aria-hidden="true" style={{ verticalAlign: 'middle' }} />
+                    </span>
+                  )}
+                  Компоненты: {issue.components.map((c) => c.name).join(', ')}
+                </div>
               )}
               {issue.fixVersions.length > 0 && (
                 <div style={{ marginTop: '0.25rem' }}>Версии: {issue.fixVersions.map((v) => v.name).join(', ')}</div>
