@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, AlertTriangle, Ban, CheckCircle, ExternalLink, Pencil } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, ExternalLink, Layers, Pencil } from 'lucide-react';
 import type { Issue } from '../../../shared/types/issue';
 import type { ValidationCategory } from '../lib/validation.js';
 import { getIssueTypeIcon } from '../lib/issueTypeIcons.js';
@@ -97,7 +97,24 @@ export function IssueRow({ issue, category }: IssueRowProps) {
         </td>
         <td className="hidden md:table-cell" style={cellStyle}>
           {issue.components.length > 0
-            ? issue.components.map((c) => <Badge key={c.id} color="var(--text-muted)">{c.name}</Badge>)
+            ? (
+              <>
+                {/* HILITE-01 (D-01/D-02/D-04): view-only Layers marker on 2+-component issues —
+                    candidates for the Phase 14 group override. Informational var(--warning),
+                    never error-red; plain span, no interaction. The title describes the
+                    last-wins winner from group.ts (GROUP-07) without changing it. */}
+                {issue.components.length >= 2 && (
+                  <span
+                    title="Несколько компонентов — при группировке попадёт в одну группу (последний компонент)"
+                    aria-label="Несколько компонентов — при группировке попадёт в одну группу (последний компонент)"
+                    style={{ marginRight: 4, verticalAlign: 'middle', color: 'var(--warning)' }}
+                  >
+                    <Layers size={14} aria-hidden="true" style={{ verticalAlign: 'middle' }} />
+                  </span>
+                )}
+                {issue.components.map((c) => <Badge key={c.id} color="var(--text-muted)">{c.name}</Badge>)}
+              </>
+            )
             : '—'}
         </td>
         <td className="hidden md:table-cell" style={cellStyle}>
