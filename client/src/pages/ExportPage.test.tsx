@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
 import { ValidationProvider } from '../context/ValidationContext.js';
+import { OverridesProvider } from '../context/OverridesContext.js';
 import { ExportPage } from './ExportPage.js';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import type { SearchResponse, Issue } from '../../../shared/types/issue';
@@ -78,10 +79,10 @@ function LocationProbe() {
   return <div data-testid="loc">{loc.pathname + '?' + loc.search}</div>;
 }
 
-function renderWithProviders(initialPath: string, preseedCache = true) {
+function renderWithProviders(initialPath: string, preseedCache = true, response: SearchResponse = searchResponse) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (preseedCache) {
-    queryClient.setQueryData(searchQueryKey(searchBody), searchResponse);
+    queryClient.setQueryData(searchQueryKey(searchBody), response);
   }
   // Phase 10 — ValidationProvider reads config via useConnectionStatus → useQuery(['config']).
   // Seed the config cache so the provider resolves shortThreshold synchronously (D-14) without a
@@ -96,28 +97,32 @@ function renderWithProviders(initialPath: string, preseedCache = true) {
     <QueryClientProvider client={queryClient}>
       <ValidationProvider>
         <EditsProvider>
-          <MemoryRouter initialEntries={[initialPath]}>
-            <Routes>
-              <Route
-                path="/export"
-                element={
-                  <>
-                    <ExportPage />
-                    <LocationProbe />
-                  </>
-                }
-              />
-              <Route
-                path="/select"
-                element={
-                  <div>
-                    select page
-                    <LocationProbe />
-                  </div>
-                }
-              />
-            </Routes>
-          </MemoryRouter>
+          {/* Phase 14 — OverridesProvider nests inside EditsProvider (production App nesting
+              from plan 01: Validation > Edits > Overrides > Routes). */}
+          <OverridesProvider>
+            <MemoryRouter initialEntries={[initialPath]}>
+              <Routes>
+                <Route
+                  path="/export"
+                  element={
+                    <>
+                      <ExportPage />
+                      <LocationProbe />
+                    </>
+                  }
+                />
+                <Route
+                  path="/select"
+                  element={
+                    <div>
+                      select page
+                      <LocationProbe />
+                    </div>
+                  }
+                />
+              </Routes>
+            </MemoryRouter>
+          </OverridesProvider>
         </EditsProvider>
       </ValidationProvider>
     </QueryClientProvider>,
@@ -322,5 +327,115 @@ describe('ExportPage navigation query preservation (NAV-03)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'К поиску' }));
     expect(screen.getByTestId('loc').textContent).toContain('/select');
     expect(screen.getByTestId('loc').textContent).toContain('project=PROJ&mode=jql&jql=project+%3D+PROJ');
+  });
+});
+
+// ─── Phase 14: OVRD-02 export wiring ────────────
+//
+// The selector from plan 01 gets its document effect here: ExportPage threads
+// useOverrides().overrides into buildDocumentDoc (validateFn precedent), so a choice
+// made in SelectPage visibly moves the issue in the preview AND in every exported
+// format — they all consume the same DocumentDoc, so asserting the preview plus one
+// export format proves the wiring for all of them. Local 3-issue response variant
+// (shared bug/story fixtures + a 2-component PROJ-3; the shared searchResponse is
+// NOT mutated): PROJ-3 carries Backend+Frontend, Jira name-sorted → last-wins =
+// Frontend, so seeding { 'PROJ-3': 'Backend' } exercises a real override.
+
+describe('ExportPage group override wiring (OVRD-02)', () => {
+  const OVERRIDES_KEY = 'rn-overrides-v1';
+  const OVERRIDE_URL = SEARCH_URL + '&group=component';
+
+  // 2-component fixture — the override candidate. Note is unique vs PROJ-1/PROJ-2 so
+  // text-level assertions cannot cross-match items.
+  const multi = {
+    key: 'PROJ-3',
+    summary: 'Multi-component fix',
+    releaseNote: 'Ускорена загрузка отчётов на главной странице',
+    issuetype: { name: 'Bug', id: '1' },
+    status: { name: 'Done', id: '100' },
+    priority: { name: 'Medium', id: '3' },
+    components: [
+      { id: 'c3', name: 'Backend' },
+      { id: 'c4', name: 'Frontend' },
+    ],
+    fixVersions: [],
+    epic: null,
+    created: '',
+    updated: '',
+    resolutiondate: '2026-08-03',
+  };
+  const overrideResponse: SearchResponse = {
+    issues: [bug, story, multi] as Issue[],
+    total: 3,
+    fetched: 3,
+    truncated: false,
+  };
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    downloadFileMock.mockReset();
+    downloadFileMock.mockImplementation(() => undefined); // default: success, no throw
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
+  /**
+   * Walk the preview DOM the way a reader does: one { title, items } per H2 section.
+   * DocumentPreview renders buildMarkdown via ReactMarkdown, so group headings surface
+   * as H2 ("Backend (2)") followed by a UL of "- KEY: text" list items.
+   */
+  function previewSections(container: HTMLElement): Array<{ title: string; items: string[] }> {
+    const root = container.querySelector('.rn-doc-preview');
+    expect(root).not.toBeNull();
+    const sections: Array<{ title: string; items: string[] }> = [];
+    let current: { title: string; items: string[] } | null = null;
+    for (const el of Array.from(root!.querySelectorAll('h2, ul'))) {
+      if (el.tagName === 'H2') {
+        current = { title: el.textContent ?? '', items: [] };
+        sections.push(current);
+      } else if (current) {
+        current.items.push(...Array.from(el.querySelectorAll('li')).map((li) => li.textContent ?? ''));
+      }
+    }
+    return sections;
+  }
+
+  it('preview reflects the override: seeded { PROJ-3: Backend } renders PROJ-3 under «Backend», no «Frontend» section', () => {
+    sessionStorage.setItem(OVERRIDES_KEY, JSON.stringify({ 'PROJ-3': 'Backend' }));
+    const { container } = renderWithProviders(OVERRIDE_URL, true, overrideResponse);
+    const sections = previewSections(container);
+    const backend = sections.find((s) => s.title.includes('Backend'));
+    expect(backend).toBeDefined();
+    expect(backend!.items.some((t) => t.includes('PROJ-3'))).toBe(true); // moved by the override
+    expect(backend!.items.some((t) => t.includes('PROJ-1'))).toBe(true); // PROJ-1 keeps its Backend group
+    // The overridden-away component spawns no section at all (groupBy creates only encountered keys).
+    expect(sections.some((s) => s.title.includes('Frontend'))).toBe(false);
+  });
+
+  it('default keeps last-wins in the preview: no seed → PROJ-3 under «Frontend» (Phase 12 behavior end-to-end)', () => {
+    const { container } = renderWithProviders(OVERRIDE_URL, true, overrideResponse);
+    const sections = previewSections(container);
+    const frontend = sections.find((s) => s.title.includes('Frontend'));
+    expect(frontend).toBeDefined();
+    expect(frontend!.items.some((t) => t.includes('PROJ-3'))).toBe(true); // last element wins
+    const backend = sections.find((s) => s.title.includes('Backend'));
+    expect(backend!.items.some((t) => t.includes('PROJ-3'))).toBe(false); // not duplicated into Backend
+  });
+
+  it('export content follows the override: the Markdown download places PROJ-3 under "## Backend", no Frontend section', () => {
+    sessionStorage.setItem(OVERRIDES_KEY, JSON.stringify({ 'PROJ-3': 'Backend' }));
+    renderWithProviders(OVERRIDE_URL, true, overrideResponse);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Экспорт в Markdown' })[0]);
+    expect(downloadFileMock).toHaveBeenCalledTimes(1);
+    const [text, ext] = downloadFileMock.mock.calls[0];
+    expect(ext).toBe('md');
+    // Ordering on the built string: the Backend heading precedes PROJ-3's entry…
+    expect(text).toContain('## Backend');
+    expect(text.indexOf('## Backend')).toBeLessThan(text.indexOf('PROJ-3'));
+    // …and the Frontend section does not contain it — in fact it does not exist.
+    expect(text).not.toContain('## Frontend');
+    expect(text).not.toMatch(/## Frontend[\s\S]*PROJ-3/);
   });
 });
