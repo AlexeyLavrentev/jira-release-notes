@@ -220,4 +220,22 @@ describe('IssueRow group override selector (OVRD-01)', () => {
     fireEvent.click(screen.getByText('PROJ-1'));
     expect(screen.queryByLabelText(/^Группа для/)).not.toBeInTheDocument();
   });
+
+  it('a stale override (component no longer on the issue) displays «По умолчанию» (FA-14-01)', () => {
+    // FA-14-01: display derives from the issue's CURRENT component options — 'Ghost' matches
+    // none of them, so the select shows the '' sentinel. The stale key itself is intentionally
+    // left untouched in storage; the export side falls back to last-wins per plan 14-02.
+    sessionStorage.setItem('rn-overrides-v1', JSON.stringify({ 'PROJ-1': 'Ghost' }));
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    fireEvent.click(screen.getByText('PROJ-1'));
+    expect((screen.getByLabelText('Группа для PROJ-1') as HTMLSelectElement).value).toBe('');
+  });
+
+  it('the Phase 13 Layers marker stays on a 2-component row with an active override (HILITE-01 c4)', () => {
+    sessionStorage.setItem('rn-overrides-v1', JSON.stringify({ 'PROJ-1': 'Alpha' }));
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    // Prohibition 2: the marker must not couple to the override choice — it renders on ALL
+    // 2+-component rows regardless of override state.
+    expect(screen.getByTitle(MULTI_COMPONENT_MARKER_TITLE)).toBeInTheDocument();
+  });
 });
