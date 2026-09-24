@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
@@ -27,7 +27,9 @@ const issue: Issue = {
 function renderRowWithProviders(
   seedEdits?: Record<string, string>,
   category: 'valid' | 'skip' = 'valid',
+  issueOverride?: Issue,
 ) {
+  const issueUnderTest = issueOverride ?? issue;
   if (seedEdits) {
     sessionStorage.setItem('rn-edits-v1', JSON.stringify(seedEdits));
   }
@@ -37,7 +39,7 @@ function renderRowWithProviders(
       <EditsProvider>
         <MemoryRouter initialEntries={['/select']}>
           <Routes>
-            <Route path="/select" element={<IssueRow issue={issue} category={category} />} />
+            <Route path="/select" element={<IssueRow issue={issueUnderTest} category={category} />} />
             <Route path="/edit/:key" element={<div>edit page</div>} />
           </Routes>
         </MemoryRouter>
@@ -111,5 +113,57 @@ describe('IssueRow expanded detail (link + author + assignee)', () => {
     expect(screen.getByText('Автор:')).toBeInTheDocument();
     expect(screen.getByText('Иван Петров')).toBeInTheDocument();
     expect(screen.getByText('не назначен')).toBeInTheDocument();
+  });
+});
+
+// ─── Phase 13: HILITE-01 multi-component marker ────────────
+
+const MULTI_COMPONENT_MARKER_TITLE =
+  'Несколько компонентов — при группировке попадёт в одну группу (последний компонент)';
+
+const multiComponentIssue: Issue = {
+  ...issue,
+  components: [
+    { id: '1', name: 'Alpha' },
+    { id: '2', name: 'Beta' },
+  ],
+};
+
+describe('IssueRow multi-component marker (HILITE-01, D-01/D-02/D-04)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('a 2-component issue shows the marker with the exact D-02 title and aria-label', () => {
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    // D-02: the title attribute IS the tooltip; the aria-label mirrors it for AT.
+    expect(screen.getByTitle(MULTI_COMPONENT_MARKER_TITLE)).toBeInTheDocument();
+    expect(screen.getByLabelText(MULTI_COMPONENT_MARKER_TITLE)).toBeInTheDocument();
+  });
+
+  it('the marker is a non-interactive span in warning color with an aria-hidden icon', () => {
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    const marker = screen.getByTitle(MULTI_COMPONENT_MARKER_TITLE);
+    expect(marker.tagName).toBe('SPAN');
+    // Prohibition 1: informational var(--warning) semantics, never var(--error).
+    expect(marker.style.color).toBe('var(--warning)');
+    // D-04: the inner icon is decorative; the wrapper span owns the labels.
+    const svg = marker.querySelector('svg');
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('issues with 0 or 1 components render no marker (criterion 3 — no false positives)', () => {
+    renderRowWithProviders();
+    expect(screen.queryByTitle(MULTI_COMPONENT_MARKER_TITLE)).not.toBeInTheDocument();
+    cleanup();
+    const singleComponentIssue: Issue = { ...issue, components: [{ id: '1', name: 'Alpha' }] };
+    renderRowWithProviders(undefined, 'valid', singleComponentIssue);
+    expect(screen.queryByTitle(MULTI_COMPONENT_MARKER_TITLE)).not.toBeInTheDocument();
+  });
+
+  it('marker presence is independent of validation category and edit state (criterion 4)', () => {
+    // skip category + seeded edit — the marker must still be there: presence is a pure
+    // function of issue.components composition.
+    renderRowWithProviders({ 'PROJ-1': 'edited text' }, 'skip', multiComponentIssue);
+    expect(screen.getByTitle(MULTI_COMPONENT_MARKER_TITLE)).toBeInTheDocument();
   });
 });
