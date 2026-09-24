@@ -547,3 +547,161 @@ describe('buildDocumentDoc — missingNotes partition (D-01/D-05/D-11, EXPORT-02
     expect(doc.missingNotes).toEqual([]);
   });
 });
+
+// ─── Phase 14: OVRD-02 overrides in component grouping ────────────
+//
+// The overrides map (Record<issueKey, componentName> from useOverrides/sessionStorage
+// 'rn-overrides-v1') threads transitively into grouping: groupBy gains a 3rd optional param,
+// buildDocumentDoc a 9th optional TRAILING param (the Phase 10 validateFn precedent). The
+// override names the winning group ONLY when that name is among the issue's CURRENT
+// components; anything else silently falls back to v1.2 last-wins (locked edge decision —
+// the issue is never lost, never duplicated, and no phantom group heading is minted).
+
+describe('Phase 14 — OVRD-02 overrides in component grouping', () => {
+  const validateFn = createValidation(DEFAULT_THRESHOLD).validateReleaseNote;
+
+  it('override moves the issue: overrides naming a CURRENT component wins over last-wins; the loser spawns no group', () => {
+    // Alpha+Beta array (Jira name-sorted, last-wins default = Beta), overridden to Alpha.
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Alpha' },
+          { id: 'c2', name: 'Beta' },
+        ],
+      }),
+    ];
+    const groups = groupBy('component', issues, { 'P-1': 'Alpha' });
+    expect([...groups.keys()]).toEqual(['Alpha']); // the only encountered key — no 'Beta' group
+    expect(groups.get('Alpha')!.map((i) => i.key)).toEqual(['P-1']); // exactly once
+  });
+
+  it('default stays v1.2 last-wins: no entry and an UNRELATED key both leave P-1 under Beta', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Alpha' },
+          { id: 'c2', name: 'Beta' },
+        ],
+      }),
+    ];
+    const empty = groupBy('component', issues, {});
+    const unrelated = groupBy('component', issues, { 'P-9': 'Alpha' });
+    expect([...empty.keys()]).toEqual(['Beta']); // byte-identical to pre-change behavior
+    expect(empty.get('Beta')!.map((i) => i.key)).toEqual(['P-1']);
+    expect([...unrelated.keys()]).toEqual(['Beta']); // an entry for another key changes nothing
+    expect(unrelated.get('Beta')!.map((i) => i.key)).toEqual(['P-1']);
+  });
+
+  it('exactly-once under overrides: sum of group counts === header.total === valid count; every key in exactly ONE group', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Backend' },
+          { id: 'c2', name: 'Frontend' },
+        ],
+        releaseNote: 'Исправлен краш при загрузке данных',
+      }),
+      makeIssue({ key: 'P-2', components: [], releaseNote: 'Добавлена проверка прав доступа' }),
+      makeIssue({
+        key: 'P-3',
+        components: [
+          { id: 'c3', name: 'Auth' },
+          { id: 'c4', name: 'Gateway' },
+        ],
+        releaseNote: 'Ускорен вход в систему на десять секунд',
+      }),
+    ];
+    const overrides = { 'P-1': 'Backend', 'P-3': 'Auth' }; // two of the three overridden
+    const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '', validateFn, overrides);
+    expect(doc.header.total).toBe(3); // valid count — overrides cannot inflate it
+    const sum = doc.groups.reduce((acc, g) => acc + g.count, 0);
+    expect(sum).toBe(doc.header.total); // arithmetic exactly-once: no duplicates, no losses
+    const allKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    expect(allKeys).toHaveLength(3);
+    expect(new Set(allKeys).size).toBe(3); // disjoint groups — each valid key exactly once
+    // Placement: overridden winners, not the last elements.
+    expect(doc.groups.find((g) => g.title === 'Backend')!.items.map((i) => i.key)).toContain('P-1');
+    expect(doc.groups.find((g) => g.title === 'Auth')!.items.map((i) => i.key)).toContain('P-3');
+    expect(doc.groups.find((g) => g.title === 'Frontend')).toBeUndefined();
+    expect(doc.groups.find((g) => g.title === 'Gateway')).toBeUndefined();
+  });
+
+  it('stale override silently falls back to last-wins; no phantom group for the stale name (locked edge, T-14-04)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Alpha' },
+          { id: 'c2', name: 'Beta' },
+        ],
+      }),
+    ];
+    // 'Gamma' is NOT among P-1's current components — the entry is ignored, not minted.
+    const groups = groupBy('component', issues, { 'P-1': 'Gamma' });
+    expect([...groups.keys()]).toEqual(['Beta']); // last-wins fallback, no 'Gamma' group
+    expect(groups.get('Beta')!.map((i) => i.key)).toEqual(['P-1']); // the issue is never lost
+  });
+
+  it('zero-component issue with an override entry still goes to «Без компонента» (not lost, not minted)', () => {
+    const issues = [makeIssue({ key: 'P-1', components: [] })];
+    const groups = groupBy('component', issues, { 'P-1': 'Alpha' });
+    expect([...groups.keys()]).toEqual([NO_COMPONENT_LABEL]);
+    expect(groups.get(NO_COMPONENT_LABEL)!.map((i) => i.key)).toEqual(['P-1']);
+  });
+
+  it('mode scope: type/epic/flat grouping ignore overrides entirely (Out of Scope honored)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        issuetype: { name: 'Bug', id: '1' },
+        components: [
+          { id: 'c1', name: 'Alpha' },
+          { id: 'c2', name: 'Beta' },
+        ],
+        epic: { key: 'E-1', summary: 'Migration' },
+      }),
+      makeIssue({ key: 'P-2', issuetype: { name: 'Story', id: '2' }, components: [], epic: null }),
+    ];
+    const overrides = { 'P-1': 'Alpha', 'P-2': 'Beta' };
+    expect(groupBy('type', issues, overrides)).toEqual(groupBy('type', issues));
+    expect(groupBy('epic', issues, overrides)).toEqual(groupBy('epic', issues));
+    expect(groupBy('flat', issues, overrides)).toEqual(groupBy('flat', issues));
+  });
+
+  it('2-arg call unchanged: groupBy(component, issues) with NO third argument keeps last-wins (every pre-existing call site)', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Alpha' },
+          { id: 'c2', name: 'Beta' },
+        ],
+      }),
+    ];
+    const groups = groupBy('component', issues);
+    expect([...groups.keys()]).toEqual(['Beta']);
+    expect(groups.get('Beta')!.map((i) => i.key)).toEqual(['P-1']);
+  });
+
+  it('an override never rescues an invalid note: an empty-note issue with an entry lands in missingNotes, absent from groups and header.total', () => {
+    const issues = [
+      makeIssue({
+        key: 'P-1',
+        components: [
+          { id: 'c1', name: 'Alpha' },
+          { id: 'c2', name: 'Beta' },
+        ],
+        releaseNote: '', // empty → invalid → missingNotes regardless of any override
+        summary: 'Пустая заметка',
+      }),
+    ];
+    const doc = buildDocumentDoc('component', issues, {}, 'priority', 'desc', '', '', validateFn, { 'P-1': 'Alpha' });
+    const groupKeys = doc.groups.flatMap((g) => g.items.map((i) => i.key));
+    expect(groupKeys).not.toContain('P-1');
+    expect(doc.missingNotes.map((m) => m.key)).toContain('P-1');
+    expect(doc.header.total).toBe(0);
+  });
+});
