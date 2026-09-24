@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
+import { OverridesProvider } from '../context/OverridesContext.js';
 import { IssueRow } from './IssueRow.js';
 import type { Issue } from '../../../shared/types/issue';
 
@@ -37,12 +38,15 @@ function renderRowWithProviders(
   return render(
     <QueryClientProvider client={queryClient}>
       <EditsProvider>
-        <MemoryRouter initialEntries={['/select']}>
-          <Routes>
-            <Route path="/select" element={<IssueRow issue={issueUnderTest} category={category} />} />
-            <Route path="/edit/:key" element={<div>edit page</div>} />
-          </Routes>
-        </MemoryRouter>
+        {/* Phase 14: OverridesProvider nested inside EditsProvider — same order as production App. */}
+        <OverridesProvider>
+          <MemoryRouter initialEntries={['/select']}>
+            <Routes>
+              <Route path="/select" element={<IssueRow issue={issueUnderTest} category={category} />} />
+              <Route path="/edit/:key" element={<div>edit page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </OverridesProvider>
       </EditsProvider>
     </QueryClientProvider>,
   );
@@ -165,5 +169,55 @@ describe('IssueRow multi-component marker (HILITE-01, D-01/D-02/D-04)', () => {
     // function of issue.components composition.
     renderRowWithProviders({ 'PROJ-1': 'edited text' }, 'skip', multiComponentIssue);
     expect(screen.getByTitle(MULTI_COMPONENT_MARKER_TITLE)).toBeInTheDocument();
+  });
+});
+
+// ─── Phase 14: OVRD-01 group override selector ────────────
+
+describe('IssueRow group override selector (OVRD-01)', () => {
+  beforeEach(() => sessionStorage.clear());
+  afterEach(() => sessionStorage.clear());
+
+  it('an expanded 2-component row renders the «Группа» select with «По умолчанию» + components', () => {
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    fireEvent.click(screen.getByText('PROJ-1'));
+    const select = screen.getByLabelText('Группа для PROJ-1') as HTMLSelectElement;
+    expect(select.tagName).toBe('SELECT');
+    // Option labels are exactly «По умолчанию» + the issue's component names, in order.
+    expect(Array.from(select.options).map((o) => o.textContent)).toEqual(['По умолчанию', 'Alpha', 'Beta']);
+    // The default option carries the empty reset sentinel (absent key = last-wins default).
+    expect(select.options[0].value).toBe('');
+  });
+
+  it('a persisted override is shown as the select value (read path / F5)', () => {
+    sessionStorage.setItem('rn-overrides-v1', JSON.stringify({ 'PROJ-1': 'Alpha' }));
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    fireEvent.click(screen.getByText('PROJ-1'));
+    expect((screen.getByLabelText('Группа для PROJ-1') as HTMLSelectElement).value).toBe('Alpha');
+  });
+
+  it('choosing a component persists it; choosing «По умолчанию» resets (deletes the key)', async () => {
+    renderRowWithProviders(undefined, 'valid', multiComponentIssue);
+    fireEvent.click(screen.getByText('PROJ-1'));
+    const select = screen.getByLabelText('Группа для PROJ-1') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'Beta' } });
+    expect(select.value).toBe('Beta');
+    // Tracer promise: the choice lands in sessionStorage via the debounced hook write.
+    await waitFor(() => expect(sessionStorage.getItem('rn-overrides-v1')).toBe('{"PROJ-1":"Beta"}'));
+    // Reset path: '' deletes the key from the context map → empty map persists after the debounce.
+    fireEvent.change(select, { target: { value: '' } });
+    expect(select.value).toBe('');
+    await waitFor(() => expect(sessionStorage.getItem('rn-overrides-v1')).toBe('{}'));
+  });
+
+  it('rows with 0 or 1 components render no select (locked UI decision)', () => {
+    renderRowWithProviders();
+    fireEvent.click(screen.getByText('PROJ-1'));
+    expect(screen.queryByLabelText(/^Группа для/)).not.toBeInTheDocument();
+    cleanup();
+    const singleComponentIssue: Issue = { ...issue, components: [{ id: '1', name: 'Alpha' }] };
+    renderRowWithProviders(undefined, 'valid', singleComponentIssue);
+    fireEvent.click(screen.getByText('PROJ-1'));
+    expect(screen.queryByLabelText(/^Группа для/)).not.toBeInTheDocument();
   });
 });

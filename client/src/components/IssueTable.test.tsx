@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EditsProvider } from '../context/EditsContext.js';
+import { OverridesProvider } from '../context/OverridesContext.js';
 import { ValidationProvider } from '../context/ValidationContext.js';
 import { IssueTable } from './IssueTable.js';
 import { SKIP_MARKER } from '../lib/validation.js';
@@ -70,33 +71,36 @@ function renderTable(props: {
     <QueryClientProvider client={queryClient}>
       <ValidationProvider>
         <EditsProvider>
-          <MemoryRouter initialEntries={['/select']}>
-            <Routes>
-              <Route
-                path="/select"
-                element={
-                  <>
-                    <IssueTable
-                      data={props.data}
-                      isLoading={props.isLoading ?? false}
-                      error={props.error ?? null}
-                      hasSearched={props.hasSearched ?? true}
-                    />
-                    <LocationProbe />
-                  </>
-                }
-              />
-              <Route
-                path="/export"
-                element={
-                  <div>
-                    export page
-                    <LocationProbe />
-                  </div>
-                }
-              />
-            </Routes>
-          </MemoryRouter>
+          {/* Phase 14: OverridesProvider nesting-only — IssueRow consumes useOverrides. */}
+          <OverridesProvider>
+            <MemoryRouter initialEntries={['/select']}>
+              <Routes>
+                <Route
+                  path="/select"
+                  element={
+                    <>
+                      <IssueTable
+                        data={props.data}
+                        isLoading={props.isLoading ?? false}
+                        error={props.error ?? null}
+                        hasSearched={props.hasSearched ?? true}
+                      />
+                      <LocationProbe />
+                    </>
+                  }
+                />
+                <Route
+                  path="/export"
+                  element={
+                    <div>
+                      export page
+                      <LocationProbe />
+                    </div>
+                  }
+                />
+              </Routes>
+            </MemoryRouter>
+          </OverridesProvider>
         </EditsProvider>
       </ValidationProvider>
     </QueryClientProvider>,
