@@ -5,6 +5,7 @@ import { ArrowLeft, FileText, FileCode } from 'lucide-react';
 import { searchQueryKey } from '../hooks/useSearch.js';
 import { useEdits } from '../context/EditsContext.js';
 import { useValidation } from '../context/ValidationContext.js';
+import { useOverrides } from '../context/OverridesContext.js';
 import { DocumentPreview } from '../components/DocumentPreview.js';
 import { StateView } from '../components/StateView.js';
 import { GroupingControl } from '../components/GroupingControl.js';
@@ -75,6 +76,9 @@ export function ExportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { edits } = useEdits();
+  // Phase 14 OVRD-02 — manual group-override choices from the selector (plan 01), threaded
+  // into buildDocumentDoc below (cache is read via getQueryData, no refetch — D-03 unchanged).
+  const { overrides } = useOverrides();
   // Phase 10 D-08 — the bound validation factory. v.validateReleaseNote is threaded into
   // buildDocumentDoc as its trailing validateFn param (group.ts is pure and cannot reach the
   // context itself).
@@ -110,8 +114,8 @@ export function ExportPage() {
   }
 
   const doc = useMemo(
-    () => buildDocumentDoc(group, issues, edits, sort, dir, version, date, v.validateReleaseNote),
-    [group, issues, edits, sort, dir, version, date, v],
+    () => buildDocumentDoc(group, issues, edits, sort, dir, version, date, v.validateReleaseNote, overrides),
+    [group, issues, edits, sort, dir, version, date, v, overrides],
   );
 
   // D-41 — count of edited issues for the summary line.
